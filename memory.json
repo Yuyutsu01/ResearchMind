@@ -1,22 +1,3 @@
 [
-    {
-        "task": "Hello there! Who are you?",
-        "output": "Mock response",
-        "timestamp": "2026-04-25T00:44:32.937390"
-    },
-    {
-        "task": "What are the action items from the meeting notes?",
-        "output": "",
-        "timestamp": "2026-04-25T00:44:33.040201"
-    },
-    {
-        "task": "Write a summary of the project goals to a file named goals.txt",
-        "output": "Successfully wrote to goals.txt.",
-        "timestamp": "2026-04-25T00:44:33.134186"
-    },
-    {
-        "task": "Read the content of notes.txt and tell me who is preparing marketing material.",
-        "output": "Meeting notes: Product launch is scheduled for Q4. Action items: Alice to prepare marketing material, Bob to finalize technical docs.",
-        "timestamp": "2026-04-25T00:44:33.251207"
-    }
+
 ]

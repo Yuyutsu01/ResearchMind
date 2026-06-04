@@ -1,27 +1,27 @@
 version: '3.8'
 
 services:
-  backend:
+  server:
     build: 
-      context: ./backend
+      context: ./server
       dockerfile: Dockerfile
     ports:
       - "8000:8000"
     volumes:
       # Mount the rag directory to persist any downloaded models or local FAISS index
-      - ./backend/rag:/app/rag
+      - ./server/rag:/app/rag
       # Mount memory to persist task history
-      - ./backend/agent_memory.json:/app/agent_memory.json
+      - ./server/agent_memory.json:/app/agent_memory.json
     environment:
       - PYTHONUNBUFFERED=1
     restart: unless-stopped
 
   frontend:
     build:
-      context: ./frontend
+      context: ./client
       dockerfile: Dockerfile
     ports:
       - "3000:3000"
     depends_on:
-      - backend
+      - server
     restart: unless-stopped
