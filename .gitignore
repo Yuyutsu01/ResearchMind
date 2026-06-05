@@ -51,3 +51,11 @@ backend/rag/documents/
 backend/memory.json
 backend/agent_memory.json
 test_planner.py
+backend/reports/
+backend/uploads/
+backend/research_platform.db
+research_platform.db
+backend/q_table.json
+q_table.json
+reports/
+

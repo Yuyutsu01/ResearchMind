@@ -1,9 +1,0 @@
-openai>=1.0.0
-sentence-transformers
-faiss-cpu
-numpy
-tf-keras
-fastapi
-uvicorn
-websockets
-python-multipart
