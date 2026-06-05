@@ -1,5 +1,0 @@
-This is a sample document about Artificial Intelligence.
-AI agents are capable of understanding natural language.
-They can be used for reasoning, acting, and completing sequences of tasks autonomously.
-Memory helps agents reuse past information and become more efficient over time.
-RAG (Retrieval-Augmented Generation) empowers agents to search for external knowledge.
