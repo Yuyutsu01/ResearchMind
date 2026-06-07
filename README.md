@@ -51,6 +51,19 @@ graph TD
 *   **Hybrid Memory:** Integrates FAISS semantic vector search with PostgreSQL relational schema managed via [db.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/memory/postgres/db.py).
 *   **RL Policy Engine:** Custom Q-Learning implementation in [policy_engine.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/rl/policy_engine.py) that learns optimal retrieval actions to maximize validation scores.
 
+### Agent Core Structure
+
+| Agent | Source File | Core Responsibility |
+| :--- | :--- | :--- |
+| **Supervisor** | [supervisor.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/supervisor.py) | Manages graph state, routing, and reinforcement learning decisions. |
+| **Document Parser** | [document_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/document_agent.py) | Performs high-fidelity layout segmentation and PDF ingestion. |
+| **Concept Explorer** | [concept_explorer.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/concept_explorer.py) | Extracts terminology and resolves mathematical formula relations. |
+| **Retrieval Engine** | [retrieval_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/retrieval_agent.py) | Executes hybrid vector searches and API crawling. |
+| **Knowledge Expansion** | [expansion_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/expansion_agent.py) | Recursively maps bibliography citation networks. |
+| **Gap Detector** | [gap_detector.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/gap_detector.py) | Analyzes empirical data to find methodological omissions. |
+| **Factual Validator** | [validator.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/validator.py) | Audits generated outputs and manages retry loops. |
+| **Report Generator** | [report_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/report_agent.py) | Compiles research reviews and logs into final PDF files. |
+
 ---
 
 ## 4. Technology Stack
