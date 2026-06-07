@@ -2,7 +2,7 @@
 
 ### *Transforming Scientific Literature into Interactive Knowledge*
 
-A universal AI-powered research platform that helps users understand, analyze, visualize, compare, and explore scientific papers through multi-agent AI, advanced retrieval systems, citation intelligence, reinforcement learning, and interactive research mentoring.
+An AI-powered research platform that helps users understand, analyze, visualize, compare, and explore scientific papers through multi-agent orchestration, citation networks, and reinforcement learning.
 
 ---
 
@@ -15,107 +15,164 @@ A universal AI-powered research platform that helps users understand, analyze, v
 
 ---
 
-## 1. Problem Statement
+<p align="center">
+  <a href="https://demo.research-intelligence.platform"><b>⚡ Live Demo</b></a> • 
+  <a href="file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/docs/setup.md"><b>📖 Documentation</b></a> • 
+  <a href="#5-dynamic-system-architecture"><b>🏗️ Interactive Architecture</b></a> • 
+  <a href="file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE"><b>📄 License</b></a>
+</p>
 
-Academic papers are static, dense, and disconnected. Traditional RAG systems merely summarize text, losing structural context, mathematical variable relations, and historical scientific citation lineages.
+---
 
-The **Research Intelligence Platform** solves this by converting static PDF literature into dynamic, interactive, and connected knowledge bases.
+## 1. Why This Project?
+
+### The Problem
+*   **Reading Friction:** Scientific papers are structured for print rather than interactive consumption.
+*   **Knowledge Fragmentation:** Research insights, experimental datasets, and citation structures remain isolated.
+*   **Time-Intense Surveys:** Drafting literature reviews requires manually locating and reading dozens of abstracts.
+*   **Undetected Research Gaps:** Finding methodology limitations or missing evaluations is difficult and error-prone.
+*   **Summarization Fallacy:** Standard AI assistants provide generic summaries that lose math and structure context.
+
+### The Solution
+The **Research Intelligence Platform** transforms research papers into interactive knowledge through AI-powered analysis, visualization, and reasoning.
 
 ---
 
 ## 2. Key Features
 
-- **Structural Deep Analysis:** Parses multi-column PDFs and extracts clean logical sections and mathematical formulas using [pdf_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/pdf_tool.py).
-- **Adaptive Research Tutoring:** Explains complex concepts by dynamically adjusting explanation style between Beginner, Intermediate, Researcher, and Expert levels.
-- **Citation Intelligence:** Computes PageRank and influence weights over bibliography graphs to discover foundational papers using [citation_graph.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/citation_graph.py).
-- **Research Gap Detection:** Automatically identifies omissions, untested methodology boundaries, and potential future research directions via [gap_detector.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/gap_detector.py).
-- **Interactive Visualizations:** Translates bibliography relationships and concept links into interactive visual graphs using [main.js](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/frontend/src/main.js).
+*   **Research Analysis:** Extracts sections and isolates equations from multi-column PDFs using [pdf_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/pdf_tool.py).
+*   **Literature Reviews:** Automatically compiles comparative reviews and methodology syntheses from retrieved context.
+*   **Citation Intelligence:** Computes PageRank and maps bibliographic lineages using [citation_graph.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/citation_graph.py).
+*   **Concept Explorer:** Identifies core terms, definitions, and traces mathematical variable structures.
+*   **Research Gap Detection:** Evaluates claims against baselines to flag experimental gaps using [gap_detector.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/gap_detector.py).
+*   **Research Tutor:** Adapts explanation complexity from Beginner analogies to Expert math derivations.
+*   **Knowledge Graphs:** Automatically structures terminology hierarchies into graphical representations.
+*   **Research Memory:** Indexes and correlates papers via a relational-vector system in [db.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/memory/postgres/db.py).
+*   **Interactive Visualizations:** Renders live, responsive citation nets and timelines using [main.js](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/frontend/src/main.js).
+*   **Reinforcement Learning Optimization:** Dynamically updates retrieval sources and search depths in [policy_engine.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/rl/policy_engine.py).
+*   **Report Generation:** Exports generated findings, gap lists, and reviews into styled PDF documents.
 
 ---
 
-## 3. System Architecture
+## 3. Dynamic System Architecture
 
-The platform uses a LangGraph-orchestrated multi-agent StateGraph. A reinforcement learning engine dynamically optimizes search query source and depth parameters based on output validation feedback.
+The platform processes papers through a multi-tier agent loop. For interactive documentation, the state graph and relationships are rendered dynamically in the dashboard rather than static layouts.
+
+```text
+User 
+ └─► Research Intelligence Platform
+      ├─► Ingestion (Document Analysis ──► Concept Explorer)
+      ├─► Synthesis (Literature Review ──► Citation Intelligence ──► Gap Detector)
+      └─► Interface (Adaptive Research Tutor ──► Visualization Engine)
+           └─► Memory + Retrieval + RL Layer (FAISS + Postgres + Policy Engine)
+                └─► Reports & Insights
+```
+
+> [!TIP]
+> **Interactive Architecture Explorer:** In the live application, the architecture can be explored interactively using React Flow and D3.js. This includes features like **Zoom/Pan**, **Agent Execution Traces**, **Data Flow Visualization**, and **State Inspection**.
+>
+> ![Architecture Diagram Placeholder](/assets/architecture.png)
+
+---
+
+## 4. Research Ingestion Workflow
+
+The platform coordinates paper parsing and research generation in a sequence of automated stages:
 
 ```mermaid
-graph TD
-    User([User]) <--> API[FastAPI Web Server]
-    API <--> Agents[LangGraph Multi-Agent Core]
-    Agents <--> RAG[FAISS Vector Store]
-    Agents <--> DB[PostgreSQL Relational DB]
-    Agents <--> RL[RL Policy Engine]
+flowchart LR
+    Upload[Upload Paper] --> Analyze[Analyze Structure] --> Extract[Extract Concepts] --> Expand[Expand Knowledge] --> Graph[Build Citation Graph] --> Gap[Detect Gaps] --> Review[Generate Review] --> Vis[Create Visualizations] --> Export[Export Report]
 ```
 
-*   **FastAPI Web Server:** Manages WebSocket connections for real-time telemetry streaming.
-*   **LangGraph Multi-Agent Core:** Manages transitions between Document Ingestion, Terminology Extraction, Retrieval, and Validation nodes.
-*   **Hybrid Memory:** Integrates FAISS semantic vector search with PostgreSQL relational schema managed via [db.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/memory/postgres/db.py).
-*   **RL Policy Engine:** Custom Q-Learning implementation in [policy_engine.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/rl/policy_engine.py) that learns optimal retrieval actions to maximize validation scores.
+---
 
-### Agent Core Structure
+## 5. Example Use Cases
 
-| Agent | Source File | Core Responsibility |
-| :--- | :--- | :--- |
-| **Supervisor** | [supervisor.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/supervisor.py) | Manages graph state, routing, and reinforcement learning decisions. |
-| **Document Parser** | [document_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/document_agent.py) | Performs high-fidelity layout segmentation and PDF ingestion. |
-| **Concept Explorer** | [concept_explorer.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/concept_explorer.py) | Extracts terminology and resolves mathematical formula relations. |
-| **Retrieval Engine** | [retrieval_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/retrieval_agent.py) | Executes hybrid vector searches and API crawling. |
-| **Knowledge Expansion** | [expansion_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/expansion_agent.py) | Recursively maps bibliography citation networks. |
-| **Gap Detector** | [gap_detector.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/gap_detector.py) | Analyzes empirical data to find methodological omissions. |
-| **Factual Validator** | [validator.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/validator.py) | Audits generated outputs and manages retry loops. |
-| **Report Generator** | [report_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/report_agent.py) | Compiles research reviews and logs into final PDF files. |
+*   **Analyze a Research Paper:** Extract sections, mathematical formulas, and terminology instantly.
+*   **Generate Literature Reviews:** Synthesize multi-paper themes and historical research progress.
+*   **Compare Multiple Papers:** Contrast dataset limits, algorithms, and empirical experiments.
+*   **Discover Research Gaps:** Uncover missing evaluations, baseline flaws, or potential thesis directions.
+*   **Build Citation Networks:** Chart PageRank influence and lineages across multiple papers.
+*   **Create Learning Roadmaps:** Adapt explanation vocabulary from Beginner analogies to Expert equations.
 
 ---
 
-## 4. Technology Stack
+## 6. Technology Stack
 
-- **Frontend:** Vanilla JS, HTML5, CSS3, Vite
-- **Backend:** FastAPI, Python, WebSockets, Uvicorn
-- **Orchestration:** LangGraph, StateGraph
-- **Retrieval & DB:** FAISS, sentence-transformers, rank-bm25, PostgreSQL, Redis, SQLite
-- **Document Processing:** PyMuPDF (fitz), pdfplumber, reportlab
+| Layer | Technologies |
+| :--- | :--- |
+| **Frontend UI** | Vanilla JS, HTML5, CSS3, Vite |
+| **Backend API** | FastAPI, Python, WebSockets, Uvicorn |
+| **Agent Core** | LangGraph, StateGraph Orchestrator |
+| **Retrieval (RAG)** | FAISS, sentence-transformers, rank-bm25 |
+| **Databases** | PostgreSQL, Redis, SQLite Fallback |
+| **RL Engine** | Custom Q-Learning Engine |
+| **Processing** | PyMuPDF (fitz), pdfplumber, reportlab |
+| **Infrastructure** | Docker, Docker Compose |
 
 ---
 
-## 5. Quick Start
+## 7. Project Directory Structure
 
-### Run with Docker (Recommended)
+```text
+Autonomous-Multi-Tool-Agent/
+├── backend/
+│   ├── agent/       # Multi-agent LangGraph coordinator (supervisor.py)
+│   │   └── rl/      # Reinforcement Learning policy engine (policy_engine.py)
+│   ├── memory/      # Relational Postgres & cache adapters (db.py)
+│   ├── rag/         # Hybrid keyword-semantic retriever (retrieve.py)
+│   └── tools/       # Parsing, citation mapping, and export APIs (pdf_tool.py)
+├── frontend/        # Single Page Application frontend (main.js)
+└── docs/            # Local manual configuration guides (setup.md)
+```
+
+---
+
+## 8. Interactive Architecture Explorer
+
+The application contains an integrated, live **Interactive Explorer** dashboard that maps system states dynamically:
+
+*   **React Flow Views:** Zoom, pan, and expand system pipeline nodes.
+*   **D3 Knowledge Graphs:** Dynamically interact with concept nodes and citation linkages.
+*   **Agent Execution Traces:** Live visualization of LangGraph state machine executions.
+*   **Real-time State Monitoring:** Inspect running agent inputs, outputs, and validation scores.
+
+![Interactive Explorer Showcase Placeholder](/assets/interactive_explorer.png)
+
+---
+
+## 9. Quick Start
+
+Start the entire containerized suite instantly with Docker Compose:
+
 ```bash
+# Clone the repository
+git clone https://github.com/shivanandvp/Autonomous-Multi-Tool-Agent.git
+
+# Launch services
 docker-compose up --build
 ```
-Access the application at `http://localhost:3000`.
 
-### Local Manual Installation
-1. **Backend:**
-   ```bash
-   cd backend
-   python -m venv venv
-   source venv/bin/activate # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
-   uvicorn app:app --reload
-   ```
-2. **Frontend:**
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
+Access the UI dashboard at `http://localhost:3000`.
 
-*Requires setting `OPENAI_API_KEY` in `backend/.env`.*
+*For local manual setup instructions and environment variable parameters, refer to [setup.md](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/docs/setup.md).*
 
 ---
 
-## 6. Roadmap
+## 10. Roadmap
 
 - [ ] **Autonomous Research Agents:** Automated note collection and literature drafting.
 - [ ] **Knowledge Graph Expansion:** Real-time linkage of terminology nodes with Wikidata.
-- [ ] **Multi-Language Support:** Translation and analysis of non-English research papers.
-- [ ] **Graph Neural Networks:** Advanced paper recommendations based on citation graph structures.
+- [ ] **Collaborative Research Workspaces:** Group citation sharing and shared document annotations.
+- [ ] **Multi-Language Research Support:** Parsing and translation of non-English scientific publications.
+- [ ] **Advanced RL Policies:** Proximal Policy Optimization (PPO) integration for retrieval.
+- [ ] **Research Recommendation Engine:** Adaptive paper suggestions based on user research history.
 
 ---
 
-## 7. License
+## 11. License
 
-Distributed under the MIT License. See [LICENSE](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE) for more information.
+Distributed under the MIT License. See [LICENSE](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE) for details.
 
 ---
 
