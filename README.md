@@ -15,15 +15,6 @@ An AI-powered research platform that helps users understand, analyze, visualize,
 
 ---
 
-<p align="center">
-  <a href="https://demo.research-intelligence.platform"><b>⚡ Live Demo</b></a> • 
-  <a href="file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/docs/setup.md"><b>📖 Documentation</b></a> • 
-  <a href="#5-dynamic-system-architecture"><b>🏗️ Interactive Architecture</b></a> • 
-  <a href="file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE"><b>📄 License</b></a>
-</p>
-
----
-
 ## 1. Why This Project?
 
 ### The Problem
@@ -71,7 +62,7 @@ User
 > [!TIP]
 > **Interactive Architecture Explorer:** In the live application, the architecture can be explored interactively using React Flow and D3.js. This includes features like **Zoom/Pan**, **Agent Execution Traces**, **Data Flow Visualization**, and **State Inspection**.
 >
-> ![Architecture Diagram Placeholder](/assets/architecture.png)
+> ![System Architecture](./assets/architecture.jpg)
 
 ---
 
@@ -128,20 +119,7 @@ Autonomous-Multi-Tool-Agent/
 
 ---
 
-## 8. Interactive Architecture Explorer
-
-The application contains an integrated, live **Interactive Explorer** dashboard that maps system states dynamically:
-
-*   **React Flow Views:** Zoom, pan, and expand system pipeline nodes.
-*   **D3 Knowledge Graphs:** Dynamically interact with concept nodes and citation linkages.
-*   **Agent Execution Traces:** Live visualization of LangGraph state machine executions.
-*   **Real-time State Monitoring:** Inspect running agent inputs, outputs, and validation scores.
-
-![Interactive Explorer Showcase Placeholder](/assets/interactive_explorer.png)
-
----
-
-## 9. Quick Start
+## 8. Quick Start
 
 Start the entire containerized suite instantly with Docker Compose:
 
@@ -159,7 +137,7 @@ Access the UI dashboard at `http://localhost:3000`.
 
 ---
 
-## 10. Roadmap
+## 9. Roadmap
 
 - [ ] **Autonomous Research Agents:** Automated note collection and literature drafting.
 - [ ] **Knowledge Graph Expansion:** Real-time linkage of terminology nodes with Wikidata.
@@ -170,7 +148,7 @@ Access the UI dashboard at `http://localhost:3000`.
 
 ---
 
-## 11. License
+## 10. License
 
 Distributed under the MIT License. See [LICENSE](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE) for details.
 
