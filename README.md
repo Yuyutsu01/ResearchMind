@@ -15,12 +15,7 @@ A universal AI-powered research platform that helps users understand, analyze, v
 
 ---
 
-## 🔗 Quick Links
-- 🚀 **[Live Demo](https://demo.research-intelligence.platform)** *(Placeholder)* | 📖 **[Documentation](https://docs.research-intelligence.platform)** *(Placeholder)* | 📄 **[License](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE)**
-
----
-
-## 2. Problem Statement
+## 1. Problem Statement
 
 Academic papers are static, dense, and disconnected. Traditional RAG systems merely summarize text, losing structural context, mathematical variable relations, and historical scientific citation lineages.
 
@@ -28,7 +23,7 @@ The **Research Intelligence Platform** solves this by converting static PDF lite
 
 ---
 
-## 3. Key Features
+## 2. Key Features
 
 - **Structural Deep Analysis:** Parses multi-column PDFs and extracts clean logical sections and mathematical formulas using [pdf_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/pdf_tool.py).
 - **Adaptive Research Tutoring:** Explains complex concepts by dynamically adjusting explanation style between Beginner, Intermediate, Researcher, and Expert levels.
@@ -38,36 +33,27 @@ The **Research Intelligence Platform** solves this by converting static PDF lite
 
 ---
 
-## 4. High-Level Architecture
+## 3. System Architecture
 
-The platform uses a LangGraph-orchestrated [supervisor.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/supervisor.py) state machine, utilizing Reinforcement Learning in [policy_engine.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/rl/policy_engine.py) to dynamically tune the RAG search depth.
+The platform uses a LangGraph-orchestrated multi-agent StateGraph. A reinforcement learning engine dynamically optimizes search query source and depth parameters based on output validation feedback.
 
 ```mermaid
-graph LR
-    User([User]) --> AE[Analysis Engine]
-    AE --> Ret[Retrieval Engine]
-    Ret --> Mem[Memory Layer]
-    Mem --> Vis[Visualization UI]
+graph TD
+    User([User]) <--> API[FastAPI Web Server]
+    API <--> Agents[LangGraph Multi-Agent Core]
+    Agents <--> RAG[FAISS Vector Store]
+    Agents <--> DB[PostgreSQL Relational DB]
+    Agents <--> RL[RL Policy Engine]
 ```
 
-*   **Analysis Engine:** Processes the document layout structure.
-*   **Retrieval Engine:** Queries vector stores and academic APIs dynamically.
-*   **Memory Layer:** PostgreSQL and FAISS hybrid vector store managed in [db.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/memory/postgres/db.py).
-*   **Visualization UI:** Live websocket updates and interactive graphs.
+*   **FastAPI Web Server:** Manages WebSocket connections for real-time telemetry streaming.
+*   **LangGraph Multi-Agent Core:** Manages transitions between Document Ingestion, Terminology Extraction, Retrieval, and Validation nodes.
+*   **Hybrid Memory:** Integrates FAISS semantic vector search with PostgreSQL relational schema managed via [db.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/memory/postgres/db.py).
+*   **RL Policy Engine:** Custom Q-Learning implementation in [policy_engine.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/rl/policy_engine.py) that learns optimal retrieval actions to maximize validation scores.
 
 ---
 
-## 5. Screenshots
-
-| Research Dashboard | Concept Explorer |
-| :---: | :---: |
-| ![Dashboard](https://raw.githubusercontent.com/shivanandvp/Autonomous-Multi-Tool-Agent/main/assets/screenshots/dashboard_placeholder.png) | ![Concept Explorer](https://raw.githubusercontent.com/shivanandvp/Autonomous-Multi-Tool-Agent/main/assets/screenshots/concept_explorer_placeholder.png) |
-| **Citation Network** | **Research Tutor Mode** |
-| ![Citation Network](https://raw.githubusercontent.com/shivanandvp/Autonomous-Multi-Tool-Agent/main/assets/screenshots/citation_network_placeholder.png) | ![Tutor Mode](https://raw.githubusercontent.com/shivanandvp/Autonomous-Multi-Tool-Agent/main/assets/screenshots/tutor_mode_placeholder.png) |
-
----
-
-## 6. Technology Stack
+## 4. Technology Stack
 
 - **Frontend:** Vanilla JS, HTML5, CSS3, Vite
 - **Backend:** FastAPI, Python, WebSockets, Uvicorn
@@ -77,7 +63,7 @@ graph LR
 
 ---
 
-## 7. Quick Start
+## 5. Quick Start
 
 ### Run with Docker (Recommended)
 ```bash
@@ -105,7 +91,7 @@ Access the application at `http://localhost:3000`.
 
 ---
 
-## 8. Roadmap
+## 6. Roadmap
 
 - [ ] **Autonomous Research Agents:** Automated note collection and literature drafting.
 - [ ] **Knowledge Graph Expansion:** Real-time linkage of terminology nodes with Wikidata.
@@ -114,7 +100,7 @@ Access the application at `http://localhost:3000`.
 
 ---
 
-## 9. License
+## 7. License
 
 Distributed under the MIT License. See [LICENSE](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/LICENSE) for more information.
 
