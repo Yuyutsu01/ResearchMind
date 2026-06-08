@@ -48,19 +48,6 @@ The **Research Intelligence Platform** transforms research papers into interacti
 ## 3. Dynamic System Architecture
 
 The platform processes papers through a multi-tier agent loop. For interactive documentation, the state graph and relationships are rendered dynamically in the dashboard rather than static layouts.
-
-```text
-User 
- └─► Research Intelligence Platform
-      ├─► Ingestion (Document Analysis ──► Concept Explorer)
-      ├─► Synthesis (Literature Review ──► Citation Intelligence ──► Gap Detector)
-      └─► Interface (Adaptive Research Tutor ──► Visualization Engine)
-           └─► Memory + Retrieval + RL Layer (FAISS + Postgres + Policy Engine)
-                └─► Reports & Insights
-```
-
-> [!TIP]
-> **Interactive Architecture Explorer:** In the live application, the architecture can be explored interactively using React Flow and D3.js. This includes features like **Zoom/Pan**, **Agent Execution Traces**, **Data Flow Visualization**, and **State Inspection**.
 >
 > ![System Architecture](./assets/architecture.jpg)
 
