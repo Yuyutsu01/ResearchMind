@@ -68,6 +68,43 @@ async def get_history():
     rows = execute_query(query, fetch=True)
     return {"history": rows}
 
+@app.delete("/history/{task_id}")
+async def delete_history_item(task_id: int):
+    """
+    Deletes a specific task history item, its DB references, and any associated generated report files.
+    """
+    try:
+        # Check if the task exists
+        query_check = "SELECT id FROM tasks WHERE id = %s"
+        row = execute_query(query_check, (task_id,), fetch=True)
+        if not row:
+            raise HTTPException(status_code=404, detail="Task not found")
+        
+        # Select and remove associated report files from the filesystem
+        query_reports = "SELECT file_path FROM reports WHERE task_id = %s"
+        report_files = execute_query(query_reports, (task_id,), fetch=True)
+        for rep in report_files:
+            file_path = rep.get("file_path")
+            if file_path and os.path.exists(file_path):
+                try:
+                    os.remove(file_path)
+                except Exception as e:
+                    print(f"[Delete File Error] {file_path}: {e}")
+        
+        # Delete related database entries
+        execute_query("DELETE FROM tool_calls WHERE task_id = %s", (task_id,))
+        execute_query("DELETE FROM plans WHERE task_id = %s", (task_id,))
+        execute_query("DELETE FROM reports WHERE task_id = %s", (task_id,))
+        execute_query("DELETE FROM concepts WHERE task_id = %s", (task_id,))
+        execute_query("DELETE FROM tasks WHERE id = %s", (task_id,))
+        
+        return {"success": True, "message": f"Successfully deleted task {task_id}."}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Failed to delete history item: {str(e)}")
+
+
 @app.get("/api/reports/{task_id}")
 async def get_reports_for_task(task_id: int):
     """
@@ -76,6 +113,89 @@ async def get_reports_for_task(task_id: int):
     query = "SELECT file_path, format, section_summary FROM reports WHERE task_id = %s"
     rows = execute_query(query, (task_id,), fetch=True)
     return {"reports": rows}
+
+@app.get("/api/concepts/{task_id}")
+async def get_concepts_endpoint(task_id: int):
+    """
+    Retrieves the extracted scientific concepts for a specific task.
+    """
+    from memory.postgres.db import get_concepts
+    concepts = get_concepts(task_id)
+    return {"concepts": concepts}
+
+@app.get("/api/citation-graph/{task_id}")
+async def get_citation_graph_endpoint(task_id: int):
+    """
+    Generates and returns the D3 citation node-link graph for a specific task.
+    """
+    from tools.citation_graph import generate_citation_graph
+    graph_data = generate_citation_graph(task_id)
+    return graph_data
+
+@app.post("/api/export/{task_id}/{export_format}")
+async def export_task_endpoint(task_id: int, export_format: str):
+    """
+    Generates and saves a compiled export document (latex, docx, pptx) for a research task.
+    """
+    try:
+        task_query = "SELECT prompt FROM tasks WHERE id = %s"
+        task_row = execute_query(task_query, (task_id,), fetch=True)
+        if not task_row:
+            raise HTTPException(status_code=404, detail="Task not found")
+        title = task_row[0]["prompt"]
+        
+        reports_query = "SELECT section_summary FROM reports WHERE task_id = %s"
+        report_rows = execute_query(reports_query, (task_id,), fetch=True)
+        
+        sections = {}
+        for r in report_rows:
+            summary_str = r.get("section_summary")
+            if summary_str:
+                try:
+                    summary = json.loads(summary_str) if isinstance(summary_str, str) else summary_str
+                    sections.update(summary)
+                except Exception:
+                    continue
+                    
+        if not sections:
+            raise HTTPException(status_code=400, detail="No generated sections found to export.")
+            
+        import re
+        safe_title = re.sub(r'[^\w\s-]', '', title).strip().replace(" ", "_")[:50]
+        os.makedirs("reports", exist_ok=True)
+        
+        from tools.export_tool import generate_latex_template, generate_docx_document, generate_pptx_presentation
+        
+        filename = ""
+        if export_format.lower() == "latex":
+            filename = f"{safe_title}.tex"
+            file_path = os.path.join("reports", filename)
+            tex_content = generate_latex_template(title, sections)
+            with open(file_path, 'w', encoding='utf-8') as f:
+                f.write(tex_content)
+        elif export_format.lower() == "docx":
+            filename = f"{safe_title}.docx"
+            file_path = os.path.join("reports", filename)
+            generate_docx_document(title, sections, file_path)
+        elif export_format.lower() == "pptx":
+            filename = f"{safe_title}.pptx"
+            file_path = os.path.join("reports", filename)
+            generate_pptx_presentation(title, sections, file_path)
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported export format. Use docx, pptx, or latex.")
+            
+        # Register new export in database reports table if not already present
+        check_q = "SELECT id FROM reports WHERE task_id = %s AND format = %s"
+        existing = execute_query(check_q, (task_id, export_format), fetch=True)
+        if not existing:
+            insert_q = "INSERT INTO reports (task_id, file_path, format, section_summary) VALUES (%s, %s, %s, %s)"
+            execute_query(insert_q, (task_id, file_path, export_format, json.dumps(sections)))
+            
+        return {"success": True, "file_path": f"/reports/{filename}", "filename": filename}
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        raise HTTPException(status_code=500, detail=f"Export failed: {str(e)}")
 
 @app.get("/telemetry")
 async def get_telemetry():

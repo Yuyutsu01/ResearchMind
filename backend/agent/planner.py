@@ -5,11 +5,17 @@ from openai import OpenAI
 from agent.telemetry import telemetry
 
 def get_openai_client():
-    """Initializes and returns the OpenAI client configured for local Ollama."""
+    """Initializes and returns the OpenAI client configured for local Ollama or custom endpoint."""
+    base_url = os.environ.get("LLM_BASE_URL", "http://localhost:11434/v1")
+    api_key = os.environ.get("LLM_API_KEY", "ollama")
     return OpenAI(
-        base_url='http://localhost:11434/v1',
-        api_key='ollama'  # required but ignored by Ollama
+        base_url=base_url,
+        api_key=api_key
     )
+
+def get_model_name() -> str:
+    """Returns the LLM model name configured via environment or default."""
+    return os.environ.get("LLM_MODEL", "llama3")
 
 def create_plan(user_request: str) -> list[str]:
     """
@@ -29,7 +35,7 @@ Format:
     
     try:
         response = client.chat.completions.create(
-            model="llama3",
+            model=get_model_name(),
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}

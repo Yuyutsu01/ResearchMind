@@ -5,7 +5,7 @@ from tools.search import search_api
 from tools.file_ops import file_reader, file_writer
 from tools.email import email_sender
 from rag.retrieve import retrieve
-from agent.planner import get_openai_client
+from agent.planner import get_openai_client, get_model_name
 from agent.telemetry import telemetry
 
 def execute_step(step_description: str, context: str) -> str:
@@ -37,7 +37,7 @@ Output JSON format exactly:
     
     try:
         response = client.chat.completions.create(
-            model="llama3",
+            model=get_model_name(),
             messages=[
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
@@ -85,7 +85,7 @@ def call_llm_action(prompt: str, context: str) -> str:
     
     try:
         response = client.chat.completions.create(
-            model="llama3",
+            model=get_model_name(),
             messages=[
                 {"role": "system", "content": "You are a helpful assistant. Context provided below."},
                 {"role": "user", "content": f"Context:\n{context}\n\nTask: {prompt}"}
