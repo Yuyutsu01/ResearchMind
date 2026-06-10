@@ -42,13 +42,11 @@ def create_supervisor_graph():
     from agent.validator import validation_node
     from agent.report_agent import report_node
     from agent.concept_explorer import concept_node
-    from agent.gap_detector import gap_detector_node
     
     workflow.add_node("document_analysis", document_node)
     workflow.add_node("concept_extraction", concept_node)
     workflow.add_node("research_retrieval", retrieval_node)
     workflow.add_node("knowledge_expansion", expansion_node)
-    workflow.add_node("gap_detection", gap_detector_node)
     workflow.add_node("validation", validation_node)
     workflow.add_node("report_generation", report_node)
     
@@ -69,9 +67,7 @@ def create_supervisor_graph():
         return "knowledge_expansion"
         
     def route_after_expansion(state: AgentState):
-        return "gap_detection"
-        
-    def route_after_gap(state: AgentState):
+        # Bypass gap detection, route directly to validation node
         return "validation"
         
     def route_after_validation(state: AgentState):
@@ -108,12 +104,6 @@ def create_supervisor_graph():
     workflow.add_conditional_edges(
         "knowledge_expansion",
         route_after_expansion,
-        {"gap_detection": "gap_detection"}
-    )
-    
-    workflow.add_conditional_edges(
-        "gap_detection",
-        route_after_gap,
         {"validation": "validation"}
     )
     

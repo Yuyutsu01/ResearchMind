@@ -1,0 +1,18 @@
+# Local Python virtual environment
+venv/
+
+# Caches
+__pycache__/
+**pycache**/
+*.pyc
+*.pyo
+*.pyd
+
+# Local database and models
+research_platform.db
+rag/
+
+# Uploads, reports and logs
+uploads/
+reports/
+*.log

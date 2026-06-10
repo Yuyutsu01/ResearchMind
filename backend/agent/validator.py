@@ -19,8 +19,8 @@ def validation_node(state: dict) -> dict:
     messages.append("Validation Agent: Reviewing outputs for hallucinations.")
     
     sections = state.get("sections", {})
-    # Flatten text to validate citation mentions
-    full_text = "\n".join(sections.values())
+    # Flatten text to validate citation mentions (filtering out nested dicts/lists)
+    full_text = "\n".join([v for v in sections.values() if isinstance(v, str)])
     
     # Grab references from retrieved papers
     references = []
@@ -62,3 +62,28 @@ def validation_node(state: dict) -> dict:
         "validation_results": validation_results,
         "messages": messages
     }
+
+def validate_step(step: str, output: str) -> tuple[bool, str]:
+    """
+    Validates a single execution step output for benchmark telemetry matching.
+    Logs validation success/failure metrics to the singleton Telemetry recorder.
+    """
+    from agent.telemetry import telemetry
+    import time
+    start_time = time.time()
+    
+    is_valid = True
+    reason = "Passed verification."
+    
+    # Output check rules
+    if not output:
+        is_valid = False
+        reason = "Empty step output."
+    elif "error" in output.lower():
+        is_valid = False
+        reason = "Error detected in output."
+        
+    duration = (time.time() - start_time) * 1000.0
+    telemetry.record_metric("Validation Rate", duration, success=is_valid)
+    return is_valid, reason
+

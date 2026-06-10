@@ -42,9 +42,11 @@ Target JSON Structure:
 {{
   "gaps": [
     {{
-      "opportunity": "Description of the gap/opportunity",
-      "limitations": "Existing methodology bottleneck or assumption constraint",
-      "proposal": "Proposed future model extension, validation strategy, or dataset modification"
+      "title": "Title of the research gap or opportunity",
+      "limitations": "Existing methodology bottleneck, dataset constraint, or assumption limitation",
+      "proposal": "Actionable proposal, e.g. future model extension or validation strategy",
+      "impact": "Expected impact score from 1 to 10 (integer or string)",
+      "publication_potential": "Publication potential (e.g. 'High', 'Medium', 'Low')"
     }},
     ...
   ]
@@ -72,14 +74,17 @@ Target JSON Structure:
     gaps_text = "### Identified Research Gaps & Opportunities\n\n"
     if gaps_list:
         for idx, g in enumerate(gaps_list):
-            gaps_text += f"{idx+1}. **{g.get('opportunity')}**\n"
+            gaps_text += f"{idx+1}. **{g.get('title')}**\n"
             gaps_text += f"   - *Limitation:* {g.get('limitations')}\n"
-            gaps_text += f"   - *Proposed Work:* {g.get('proposal')}\n\n"
+            gaps_text += f"   - *Actionable Proposal:* {g.get('proposal')}\n"
+            gaps_text += f"   - *Expected Impact:* {g.get('impact')}/10\n"
+            gaps_text += f"   - *Publication Potential:* {g.get('publication_potential')}\n\n"
     else:
         gaps_text += "No significant research gaps could be determined automatically from the text."
         
     state_sections = dict(state.get("sections", {}))
     state_sections["gaps"] = gaps_text
+    state_sections["gaps_data"] = gaps_list # Save structured list for dashboard UI
     
     duration_ms = (time.time() - start_time) * 1000.0
     log_tool_call(

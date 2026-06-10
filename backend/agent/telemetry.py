@@ -24,6 +24,12 @@ class Telemetry:
         entry = MetricEntry(name=name, duration=duration, success=success, metadata=metadata or {})
         self.metrics.append(entry)
         print(f"[Telemetry] Recorded {name}: {duration:.2f}ms (Success: {success})")
+        # Persist metric to SQLite database
+        try:
+            from memory.postgres.db import log_telemetry
+            log_telemetry(name, duration, success, metadata)
+        except Exception as e:
+            print(f"[Telemetry] Database log warning: {e}")
 
     def record_cache_hit(self):
         self.cache_hits += 1

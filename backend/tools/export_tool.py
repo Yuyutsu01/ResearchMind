@@ -5,6 +5,9 @@ def generate_latex_template(title: str, sections: dict) -> str:
     """
     Generate LaTeX source code summarizing the task research details.
     """
+    # Safety filter: Only serialize string sections (e.g. raw text summaries) to prevent
+    # compiler crashes or rendering errors on nested JSON objects/arrays.
+    sections = {k: v for k, v in sections.items() if isinstance(v, str)}
     title_clean = title.replace("_", "\\_").replace("&", "\\&").replace("%", "\\%")
     tex = r"""\documentclass{article}
 \usepackage[utf8]{inputenc}
@@ -29,6 +32,8 @@ def generate_docx_document(title: str, sections: dict, output_path: str):
     """
     Generate a Word document (.docx) using python-docx with local text file fallback.
     """
+    # Safety filter: Only serialize string sections to avoid crashing python-docx
+    sections = {k: v for k, v in sections.items() if isinstance(v, str)}
     try:
         import docx
         doc = docx.Document()
@@ -53,6 +58,8 @@ def generate_pptx_presentation(title: str, sections: dict, output_path: str):
     """
     Generate PowerPoint slides (.pptx) using python-pptx with outline file fallback.
     """
+    # Safety filter: Only serialize string sections to avoid crashing python-pptx splits
+    sections = {k: v for k, v in sections.items() if isinstance(v, str)}
     try:
         from pptx import Presentation
         prs = Presentation()

@@ -38,6 +38,19 @@ class ChatRequest(BaseModel):
     request: str
     pdf_path: Optional[str] = None
 
+
+
+@app.on_event("startup")
+async def startup_event():
+    # Warm up the supervisor graph and load SentenceTransformer into memory on startup
+    print("[Startup] Pre-loading LangGraph supervisor and sentence-transformers...")
+    try:
+        from agent.supervisor import create_supervisor_graph
+        create_supervisor_graph()
+        print("[Startup] Pre-load complete and successful.")
+    except Exception as e:
+        print(f"[Startup] Failed to pre-load supervisor: {e}")
+
 @app.get("/")
 async def root():
     return {

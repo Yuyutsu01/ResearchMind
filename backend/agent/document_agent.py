@@ -13,18 +13,17 @@ from memory.postgres.db import log_tool_call
 from rag.retrieve import add_documents_to_index
 from agent.planner import get_openai_client, get_model_name
 
-def extract_academic_details_via_llm(sections: dict) -> dict:
+def extract_brief_roadmap_matters_via_llm(sections: dict) -> dict:
     """
-    Calls Ollama to parse paper abstract/intro and extract structured metadata.
+    Call 1: Extracts Executive Brief, Contributions, Why Paper Matters, and Reading Roadmap.
     """
     client = get_openai_client()
+    abstract = sections.get("abstract", "")[:2500]
+    intro = sections.get("introduction", "")[:2000]
+    conclusion = sections.get("conclusion", "")[:2000]
     
-    # Grab first part of document to avoid context length overflow
-    abstract = sections.get("abstract", "")
-    intro = sections.get("introduction", "")[:1500]
-    
-    prompt = f"""You are an expert academic paper analyzer. Analyze the provided abstract and introduction to extract key metadata.
-You MUST respond with ONLY a valid JSON object. Do not include markdown wraps or explanations.
+    prompt = f"""You are an expert scientific analyst. Analyze the abstract, introduction, and conclusion of the research paper provided below.
+Generate a valid JSON object. Do not include markdown wraps or explanations.
 
 Abstract:
 {abstract}
@@ -32,13 +31,40 @@ Abstract:
 Introduction Snippet:
 {intro}
 
+Conclusion Snippet:
+{conclusion}
+
 Target JSON Structure:
 {{
-  "title": "Official paper title",
-  "authors": ["Author name 1", "Author name 2"],
-  "datasets": ["Dataset Name A", "Dataset Name B"],
-  "methodology": "Brief description of the model architecture, equations, or proposed framework",
-  "key_findings": "Summary of experimental results or core contributions"
+  "executive_brief": {{
+    "problem_statement": "A clear description of the core problem addressed by the paper",
+    "proposed_solution": "The proposed method or model introduced by the authors",
+    "key_innovation": "What makes this solution unique compared to existing work",
+    "main_results": "Summary of the major empirical findings or theoretical proofs",
+    "impact": "High-level summary of the scientific or practical impact",
+    "difficulty_score": "Difficulty score from 1 to 10 (integer or string)",
+    "reading_time": "Estimated time to read in minutes (e.g. '15 mins')",
+    "research_domain": "Core research field (e.g. 'Natural Language Processing')"
+  }},
+  "key_contributions": [
+    {{
+      "title": "Title of contribution 1",
+      "description": "Short explanation of the contribution",
+      "importance": "Why this specific contribution matters scientifically"
+    }}
+  ],
+  "why_it_matters": {{
+    "historical_importance": "The historical importance of this work in scientific lineage",
+    "industry_impact": "How this research changed industry practices or commercial tech",
+    "academic_impact": "How it influenced academic studies and citation flow",
+    "papers_influenced": ["Paper A", "Paper B", "Modern LLMs (GPT, Llama, Claude, etc.)"],
+    "modern_applications": "List modern systems or products using this technology"
+  }},
+  "reading_roadmap": {{
+    "before_reading": ["Prerequisite subject or paper 1", "Prerequisite subject or paper 2"],
+    "after_reading": ["Recommended follow-up paper 1", "Recommended follow-up paper 2"],
+    "learning_path": "Brief description of the visual roadmap or logical steps to learn this topic"
+  }}
 }}
 """
     try:
@@ -51,13 +77,81 @@ Target JSON Structure:
             temperature=0.1
         )
         content = response.choices[0].message.content
-        # Extract json matching braces
         json_match = re.search(r'\{.*\}', content, re.DOTALL)
         if json_match:
             return json.loads(json_match.group(0))
     except Exception as e:
-        print(f"[Document Agent] LLM metadata extraction error: {e}")
+        print(f"[Document Agent] Brief LLM extraction error: {e}")
     return {}
+
+def extract_deconstruction_opportunities_via_llm(sections: dict) -> dict:
+    """
+    Call 2: Renders the Paper Deconstruction collapsible elements and the Research Gaps/Opportunities.
+    """
+    client = get_openai_client()
+    abstract = sections.get("abstract", "")[:1500]
+    intro = sections.get("introduction", "")[:1500]
+    methodology = sections.get("methodology", "")[:2500]
+    results = sections.get("results", "")[:2500]
+    
+    prompt = f"""You are an expert scientific peer reviewer and analyst. Analyze the abstract, introduction, methodology, and results of the research paper provided below.
+Generate a valid JSON object. Do not include markdown wraps or explanations.
+
+Abstract:
+{abstract}
+
+Introduction Snippet:
+{intro}
+
+Methodology Snippet:
+{methodology}
+
+Results Snippet:
+{results}
+
+Target JSON Structure:
+{{
+  "paper_deconstruction": {{
+    "problem": "Detailed, clear explanation of the scientific problem being solved (under 3 sentences)",
+    "motivation": "Why solving this problem is important and what drove the authors (under 3 sentences)",
+    "methodology": "Step-by-step description of the architecture, approach, or algorithms (under 4 sentences)",
+    "experiments": "Details on datasets, metrics, and training setup (under 3 sentences)",
+    "results": "Empirical outcomes, comparisons, and achievements (under 3 sentences)",
+    "limitations": "Bottlenecks, compute constraints, or assumptions admitted or inferred (under 3 sentences)",
+    "future_work": "Future paths or directions suggested by authors (under 3 sentences)"
+  }},
+  "opportunities": [
+    {{
+      "title": "Opportunity Title",
+      "description": "Short explanation of the novel opportunity or extension of this work",
+      "novelty": "Novelty score from 1 to 10",
+      "impact": "Impact score from 1 to 10",
+      "difficulty": "Difficulty score from 1 to 10",
+      "time": "Estimated research duration (e.g. '3-6 months')",
+      "funding": "Funding potential (e.g. 'High' or 'Medium')",
+      "publication": "Publication potential (e.g. 'High')"
+    }}
+  ]
+}}
+"""
+    try:
+        response = client.chat.completions.create(
+            model=get_model_name(),
+            messages=[
+                {"role": "system", "content": "You output JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
+        content = response.choices[0].message.content
+        json_match = re.search(r'\{.*\}', content, re.DOTALL)
+        if json_match:
+            return json.loads(json_match.group(0))
+    except Exception as e:
+        print(f"[Document Agent] Deconstruction LLM extraction error: {e}")
+    return {}
+
+
 
 def parse_references(references_text: str) -> list[str]:
     """Splits references section text into individual citation strings."""
@@ -117,30 +211,54 @@ def document_node(state: dict) -> dict:
     # 1. Add chunks to RAG Vector & Keyword index
     add_documents_to_index(raw_text, filename, task_id)
     
-    # 2. Extract detailed structural references
+    # 2. Extract detailed references
     ref_list = parse_references(sections.get("references", ""))
     
-    # 3. Call LLM for structured metadata
-    llm_metadata = extract_academic_details_via_llm(sections)
+    # 3. Call LLM modular extraction functions (Bypassing equations call to optimize ingestion latency)
+    brief_data = extract_brief_roadmap_matters_via_llm(sections)
+    decon_data = extract_deconstruction_opportunities_via_llm(sections)
+    
+    brief = brief_data.get("executive_brief", {})
     
     paper_metadata = {
-        "title": llm_metadata.get("title") or doc_data.get("title") or filename,
-        "authors": llm_metadata.get("authors") or ["Unknown"],
-        "datasets": llm_metadata.get("datasets") or [],
-        "methodology": llm_metadata.get("methodology") or "Not explicitly detailed.",
-        "key_findings": llm_metadata.get("key_findings") or "Not analyzed.",
+        "title": brief.get("title") or doc_data.get("title") or filename,
+        "authors": brief_data.get("why_it_matters", {}).get("authors") or ["Unknown"],
+        "datasets": decon_data.get("opportunities", [{}])[0].get("datasets") or [],
+        "methodology": brief.get("proposed_solution") or "Not explicitly detailed.",
+        "key_findings": brief.get("main_results") or "Not analyzed.",
         "num_pages": doc_data.get("num_pages", 1),
         "num_tables": len(doc_data.get("tables", [])),
         "num_citations": len(ref_list),
-        "citations_extracted": ref_list[:15]  # Store first 15 references
+        "citations_extracted": ref_list[:15]
     }
     
-    # Update sections with LLM summaries
-    state_sections = dict(state.get("sections", {}))
+    # Formulate custom section summary
+    state_sections = {}
     for k, v in sections.items():
         state_sections[k] = v
         
-    # Store key structured data back into state sections
+    # Put structured briefs inside section summary JSON
+    state_sections["executive_brief"] = brief
+    state_sections["key_contributions"] = brief_data.get("key_contributions", [])
+    state_sections["why_it_matters"] = brief_data.get("why_it_matters", {})
+    state_sections["reading_roadmap"] = brief_data.get("reading_roadmap", {})
+    state_sections["paper_deconstruction"] = decon_data.get("paper_deconstruction", {})
+    state_sections["opportunities"] = decon_data.get("opportunities", [])
+    state_sections["equations"] = [] # Kept empty for dashboard schema compatibility
+
+    
+    # Compile clean markdown summary text for static compilers
+    summary_text = "### Executive Research Brief\n\n"
+    summary_text += f"* **Research Domain:** {brief.get('research_domain', 'N/A')}\n"
+    summary_text += f"* **Estimated Reading Time:** {brief.get('reading_time', 'N/A')}\n"
+    summary_text += f"* **Difficulty Score:** {brief.get('difficulty_score', 'N/A')}/10\n\n"
+    summary_text += f"#### Problem Statement\n{brief.get('problem_statement', 'N/A')}\n\n"
+    summary_text += f"#### Proposed Solution\n{brief.get('proposed_solution', 'N/A')}\n\n"
+    summary_text += f"#### Key Innovation\n{brief.get('key_innovation', 'N/A')}\n\n"
+    summary_text += f"#### Main Results\n{brief.get('main_results', 'N/A')}\n\n"
+    summary_text += f"#### Impact\n{brief.get('impact', 'N/A')}\n"
+    
+    state_sections["summary"] = summary_text
     state_sections["metadata"] = json.dumps(paper_metadata)
     
     # Log telemetry
@@ -150,12 +268,12 @@ def document_node(state: dict) -> dict:
         step_index=1,
         tool_name="academic_pdf_parser",
         kwargs={"pdf_path": pdf_path},
-        output=f"Extracted {len(state_sections)} sections, {paper_metadata['num_citations']} references, and indexed text chunks for RAG.",
+        output=f"Extracted {len(state_sections)} sections, and compiled structured brief and deconstructions.",
         success=True,
         duration_ms=duration_ms
     )
     
-    messages.append(f"Document Analysis Agent: Parsed '{paper_metadata['title']}' by {', '.join(paper_metadata['authors'][:3])}.")
+    messages.append(f"Document Analysis Agent: Extracted structured deconstruction and executive roadmap from '{paper_metadata['title']}'.")
     
     return {
         **state,
