@@ -1,0 +1,22 @@
+# Dependency folders
+node_modules/
+venv/
+
+# Build outputs
+dist/
+build/
+
+# Version control and editor files
+.git/
+.vscode/
+
+# Caches
+__pycache__/
+**pycache**/
+
+# Local uploads and reports
+uploads/
+reports/
+
+# Log files
+*.log
