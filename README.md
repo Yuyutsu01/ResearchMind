@@ -177,7 +177,22 @@ To evaluate agent performance metrics and generate mock data for the telemetry d
     ```
 3.  Run the benchmark suite:
     ```bash
-    python benchmark.py --mock
-    ```
-
 This executes test prompts through the planner, executor, and validator nodes, verifying latency constraints and saving records in `research_platform.db`.
+
+---
+
+## 🔮 Future Work & Roadmap
+
+### Addressing Sci-Bot Limitations
+Sci-Hub recently launched an experimental AI assistant (**Sci-Bot**) to answer questions from its archives. However, early evaluations reveal significant limitations in its performance:
+*   **Weak Multi-Turn Conversations:** Struggles to maintain deep context over multi-turn dialogues.
+*   **Limited Access to Newer Papers:** Restricted to older literature with slow database updates.
+*   **Weak Reference Relevance:** Citations provided are frequently not the most relevant to the query context.
+*   **Low Research Assistance Capability:** Still far from replacing or effectively aiding a serious researcher.
+
+We aim to directly resolve these gaps with the following roadmap items:
+*   **Long-Context Orchestration:** Upgrade the LangGraph state loop to maintain deep conversational state and context history across long, multi-turn dialogues.
+*   **Dynamic Literature Sync:** Connect real-time retrieval agents to ArXiv, PubMed, and Semantic Scholar to query and ingest newly published papers on-demand.
+*   **PageRank Reranking Optimization:** Integrate PageRank centrality scoring directly into our hybrid RRF (Reciprocal Rank Fusion) reranker to prioritize the most academically influential references.
+*   **Serious Researcher Co-Pilot:** Extend the validation agent with deeper mathematical and empirical fact-checking, making it a reliable partner for advanced academic research.
+
