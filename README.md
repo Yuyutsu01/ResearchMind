@@ -60,7 +60,7 @@ The platform processes papers through a multi-tier agent loop. The state graph, 
 flowchart TD
     UserRequest[User Request / Paper Upload] --> supervisor{Agent Supervisor}
     
-    subgraph Agent Loop (LangGraph StateGraph)
+    subgraph "Agent Loop (LangGraph StateGraph)"
         supervisor -->|Route| doc_agent[Document Agent]
         supervisor -->|Route| concept_agent[Concept Explorer]
         supervisor -->|Route| retrieval_agent[RAG Retrieval Agent]
@@ -69,7 +69,7 @@ flowchart TD
         supervisor -->|Route| report_agent[Report Generation Agent]
     end
     
-    subgraph Data & Optimization
+    subgraph "Data & Optimization"
         retrieval_agent <-->|Dense/Lexical Query| FAISS[(FAISS & BM25 Retriever)]
         validator_agent -->|Verify Citations| db[(SQLite DB)]
         supervisor <-->|Choose Source & Depth| RL[Q-Learning Policy Engine]
@@ -109,8 +109,8 @@ Launch the entire containerized application suite instantly using Docker Compose
 1.  **Ensure Docker Desktop is running** on your system.
 2.  Clone the repository and navigate to the root directory:
     ```bash
-    git clone https://github.com/shivanandvp/Autonomous-Multi-Tool-Agent.git
-    cd Autonomous-Multi-Tool-Agent
+    git clone https://github.com/yuyutsu01/ResearchMind.git
+    cd ResearchMind
     ```
 3.  Launch the services:
     ```bash
