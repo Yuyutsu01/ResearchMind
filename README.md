@@ -79,12 +79,12 @@ flowchart TD
 ```
 
 ### LangGraph Multi-Agent Orchestration Flow:
-1.  **Document Analysis Node:** Parses structure and equations from multi-column PDFs using [pdf_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/pdf_tool.py).
-2.  **Concept Extraction Node:** Isolates terms, definitions, and traces variable structures using [concept_explorer.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/concept_explorer.py).
-3.  **Research Retrieval Node:** Performs hybrid vector/keyword searches using [retrieve.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/rag/retrieve.py).
-4.  **Knowledge Expansion Node:** Fetches external bibliographic contexts using [expansion_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/expansion_agent.py).
-5.  **Validation Node:** Verifies factual claims and checks citations for hallucinations using [validator.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/agent/validator.py).
-6.  **Report Generation Node:** Compiles final latex, docx, and pptx presentations using [export_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/tools/export_tool.py).
+1.  **Document Analysis Node:** Parses structure and equations from multi-column PDFs using [pdf_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/adapters/tools/pdf_tool.py).
+2.  **Concept Extraction Node:** Isolates terms, definitions, and traces variable structures using [concept_explorer.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/domain/services/concept_explorer.py).
+3.  **Research Retrieval Node:** Performs hybrid vector/keyword searches using [retrieve.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/adapters/rag/retrieve.py).
+4.  **Knowledge Expansion Node:** Fetches external bibliographic contexts using [expansion_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/domain/services/expansion_agent.py).
+5.  **Validation Node:** Verifies factual claims and checks citations for hallucinations using [validator.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/domain/services/validator.py).
+6.  **Report Generation Node:** Compiles final latex, docx, and pptx presentations using [export_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/adapters/tools/export_tool.py).
 
 ---
 
@@ -104,7 +104,7 @@ flowchart TD
 ## 🚀 Quick Start Guide
 
 ### Containerized Execution (Recommended)
-Launch the entire containerized application suite instantly using Docker Compose:
+Launch the entire containerized application suite instantly using our Makefile:
 
 1.  **Ensure Docker Desktop is running** on your system.
 2.  Clone the repository and navigate to the root directory:
@@ -112,10 +112,25 @@ Launch the entire containerized application suite instantly using Docker Compose
     git clone https://github.com/yuyutsu01/ResearchMind.git
     cd ResearchMind
     ```
-3.  Launch the services:
-    ```bash
-    docker-compose up --build
-    ```
+3.  Launch the development environment (with hot-reloading):
+    *   **Using Makefile (macOS/Linux):**
+        ```bash
+        make dev
+        ```
+    *   **Using Docker Compose directly (Windows / without Make):**
+        ```bash
+        docker compose -f deploy/docker/docker-compose.dev.yml up --build
+        ```
+
+    *Alternatively, launch the optimized production build:*
+    *   **Using Makefile (macOS/Linux):**
+        ```bash
+        make prod
+        ```
+    *   **Using Docker Compose directly (Windows / without Make):**
+        ```bash
+        docker compose -f deploy/docker/docker-compose.prod.yml up --build -d
+        ```
 4.  Access the web dashboard in your browser at `http://localhost:3000`.
 
 ---
@@ -178,6 +193,12 @@ To evaluate agent performance metrics and generate mock data for the telemetry d
 3.  Run the benchmark suite:
     ```bash
 This executes test prompts through the planner, executor, and validator nodes, verifying latency constraints and saving records in `research_platform.db`.
+
+---
+
+## 📚 Documentation
+
+For a complete architectural breakdown, codebase analysis, and technical due diligence report, please read the [Technical Analysis Report](docs/technical_analysis.md).
 
 ---
 

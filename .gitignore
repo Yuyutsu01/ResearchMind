@@ -58,4 +58,8 @@ research_platform.db
 backend/q_table.json
 q_table.json
 reports/
+goals.txt
+memory.json
+notes.txt
+backend/notes.txt
 
