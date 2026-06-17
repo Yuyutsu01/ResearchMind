@@ -9,14 +9,18 @@ from pydantic import BaseModel
 from typing import Optional
 
 # Ensure local modules can be imported
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+if backend_dir not in sys.path:
+    sys.path.append(backend_dir)
+if os.path.join(backend_dir, "src") not in sys.path:
+    sys.path.append(os.path.join(backend_dir, "src"))
 
-from memory.postgres.db import create_task, update_task_output, get_telemetry_summary, execute_query
-from agent.supervisor import create_supervisor_graph, AgentState
-from agent.rl.policy_engine import policy_engine
-from agent.rl.trainer import train_policy
-from agent.rl.reward_engine import calculate_reward
-from agent.rl.experience_store import save_transition
+from src.adapters.db.postgres_db import create_task, update_task_output, get_telemetry_summary, execute_query
+from src.domain.services.supervisor import create_supervisor_graph, AgentState
+from src.domain.rl.policy_engine import policy_engine
+from src.domain.rl.trainer import train_policy
+from src.domain.rl.reward_engine import calculate_reward
+from src.domain.rl.experience_store import save_transition
 
 app = FastAPI(title="Research Intelligence Agent API")
 
@@ -45,7 +49,7 @@ async def startup_event():
     # Warm up the supervisor graph and load SentenceTransformer into memory on startup
     print("[Startup] Pre-loading LangGraph supervisor and sentence-transformers...")
     try:
-        from agent.supervisor import create_supervisor_graph
+        from src.domain.services.supervisor import create_supervisor_graph
         create_supervisor_graph()
         print("[Startup] Pre-load complete and successful.")
     except Exception as e:

@@ -7,11 +7,11 @@ os.environ["TF_ENABLE_ONEDNN_OPTS"] = "0"
 # Ensure local modules can be imported
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from agent.planner import create_plan
-from agent.executor import execute_step
-from agent.validator import validate_step
-from agent.memory import retrieve_similar_task, store_task
-from rag.retrieve import init_retriever
+from src.domain.services.planner import create_plan
+from src.domain.services.executor import execute_step
+from src.domain.services.validator import validate_step
+from src.domain.services.memory import retrieve_similar_task, store_task
+from src.adapters.rag.retrieve import init_retriever
 
 MAX_RETRIES = 3
 

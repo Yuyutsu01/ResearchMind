@@ -4,12 +4,20 @@ import time
 from typing import TypedDict, List, Dict, Any
 from langgraph.graph import StateGraph, END
 
-# Ensure parent modules can be imported
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
 
-from agent.rl.policy_engine import policy_engine
-from agent.rl.reward_engine import calculate_reward
-from agent.rl.experience_store import save_transition
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.domain.rl.policy_engine import policy_engine
+from src.domain.rl.reward_engine import calculate_reward
+from src.domain.rl.experience_store import save_transition
 
 # Define the shared Graph State
 class AgentState(TypedDict):
@@ -36,12 +44,12 @@ def create_supervisor_graph():
     workflow = StateGraph(AgentState)
     
     # 1. Define nodes
-    from agent.document_agent import document_node
-    from agent.retrieval_agent import retrieval_node
-    from agent.expansion_agent import expansion_node
-    from agent.validator import validation_node
-    from agent.report_agent import report_node
-    from agent.concept_explorer import concept_node
+    from src.domain.services.document_agent import document_node
+    from src.domain.services.retrieval_agent import retrieval_node
+    from src.domain.services.expansion_agent import expansion_node
+    from src.domain.services.validator import validation_node
+    from src.domain.services.report_agent import report_node
+    from src.domain.services.concept_explorer import concept_node
     
     workflow.add_node("document_analysis", document_node)
     workflow.add_node("concept_extraction", concept_node)

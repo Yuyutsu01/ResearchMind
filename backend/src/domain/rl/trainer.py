@@ -2,11 +2,19 @@ import os
 import sys
 import argparse
 
-# Ensure parent modules can be imported
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
 
-from agent.rl.experience_store import get_replay_buffer
-from agent.rl.policy_engine import policy_engine
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.domain.rl.experience_store import get_replay_buffer
+from src.domain.rl.policy_engine import policy_engine
 
 def train_policy(epochs: int = 1, alpha: float = 0.1, gamma: float = 0.9) -> int:
     """

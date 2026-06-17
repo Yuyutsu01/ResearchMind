@@ -2,9 +2,21 @@ import json
 import re
 import time
 import os
-from agent.planner import get_openai_client, get_model_name
-from tools.report_tool import compile_markdown_report, compile_pdf_report, compile_docx_report, compile_pptx_report
-from memory.postgres.db import save_report, log_tool_call
+import sys
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
+
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.domain.services.planner import get_openai_client, get_model_name
+from src.adapters.tools.report_tool import compile_markdown_report, compile_pdf_report, compile_docx_report, compile_pptx_report
+from src.adapters.db.postgres_db import save_report, log_tool_call
 
 def generate_synthesis_via_llm(query: str, retrieved_papers: list, external_context: list) -> dict:
     """

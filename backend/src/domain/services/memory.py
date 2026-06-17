@@ -2,8 +2,20 @@ import os
 import json
 import numpy as np
 from datetime import datetime
-from rag.embed import get_embedding
-from agent.telemetry import telemetry
+import sys
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
+
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.adapters.rag.embed import get_embedding
+from src.domain.services.telemetry import telemetry
 
 MEMORY_FILE = "memory.json"
 

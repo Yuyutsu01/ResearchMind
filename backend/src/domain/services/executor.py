@@ -1,12 +1,25 @@
 import json
 import time
 from openai import OpenAI
-from tools.search import search_api
-from tools.file_ops import file_reader, file_writer
-from tools.email import email_sender
-from rag.retrieve import retrieve
-from agent.planner import get_openai_client, get_model_name
-from agent.telemetry import telemetry
+import os
+import sys
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
+
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.adapters.tools.search import search_api
+from src.adapters.tools.file_ops import file_reader, file_writer
+from src.adapters.tools.email import email_sender
+from src.adapters.rag.retrieve import retrieve
+from src.domain.services.planner import get_openai_client, get_model_name
+from src.domain.services.telemetry import telemetry
 
 def execute_step(step_description: str, context: str) -> str:
     """

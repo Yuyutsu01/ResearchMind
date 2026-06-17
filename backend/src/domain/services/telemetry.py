@@ -26,7 +26,7 @@ class Telemetry:
         print(f"[Telemetry] Recorded {name}: {duration:.2f}ms (Success: {success})")
         # Persist metric to SQLite database
         try:
-            from memory.postgres.db import log_telemetry
+            from src.adapters.db.postgres_db import log_telemetry
             log_telemetry(name, duration, success, metadata)
         except Exception as e:
             print(f"[Telemetry] Database log warning: {e}")

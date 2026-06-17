@@ -2,11 +2,19 @@ import os
 import sys
 import time
 
-# Ensure parent modules can be imported
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
 
-from tools.citation_tool import validate_citations
-from memory.postgres.db import log_tool_call
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.adapters.tools.citation_tool import validate_citations
+from src.adapters.db.postgres_db import log_tool_call
 
 def validation_node(state: dict) -> dict:
     """
@@ -68,7 +76,7 @@ def validate_step(step: str, output: str) -> tuple[bool, str]:
     Validates a single execution step output for benchmark telemetry matching.
     Logs validation success/failure metrics to the singleton Telemetry recorder.
     """
-    from agent.telemetry import telemetry
+    from src.domain.services.telemetry import telemetry
     import time
     start_time = time.time()
     

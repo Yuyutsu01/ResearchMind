@@ -3,12 +3,20 @@ import sys
 import time
 import re
 
-# Ensure parent modules can be imported
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+# Ensure backend directory is in path for imports
+current_dir = os.path.dirname(os.path.abspath(__file__))
+while current_dir and os.path.basename(current_dir) != "backend":
+    parent = os.path.dirname(current_dir)
+    if parent == current_dir:
+        break
+    current_dir = parent
 
-from tools.arxiv_tool import search_arxiv, search_semantic_scholar
-from tools.web_search_tool import search_web
-from memory.postgres.db import log_tool_call
+if current_dir and current_dir not in sys.path:
+    sys.path.insert(0, current_dir)
+
+from src.adapters.tools.arxiv_tool import search_arxiv, search_semantic_scholar
+from src.adapters.tools.web_search_tool import search_web
+from src.adapters.db.postgres_db import log_tool_call
 
 def retrieval_node(state: dict) -> dict:
     """
@@ -57,7 +65,7 @@ def retrieval_node(state: dict) -> dict:
     )
     
     # 2. Add retrieved paper abstracts to RAG index dynamically so agents can search them
-    from rag.retrieve import add_documents_to_index
+    from src.adapters.rag.retrieve import add_documents_to_index
     for paper in retrieved:
         title = paper.get("title", "unnamed_paper")
         abstract = paper.get("abstract", "")
