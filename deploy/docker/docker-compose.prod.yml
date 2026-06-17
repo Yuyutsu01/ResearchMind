@@ -1,15 +1,15 @@
 services:
   backend:
     build: 
-      context: ./backend
-      dockerfile: Dockerfile
+      context: ../../backend
+      dockerfile: ../deploy/docker/backend/Dockerfile.prod
     ports:
       - "8000:8000"
     volumes:
       # Mount the rag directory to persist any downloaded models or local FAISS index
-      - ./backend/rag:/app/rag
+      - ../../backend/rag:/app/rag
       # Mount memory to persist task history
-      - ./backend/agent_memory.json:/app/agent_memory.json
+      - ../../backend/agent_memory.json:/app/agent_memory.json
     environment:
       - PYTHONUNBUFFERED=1
       - LLM_BASE_URL=http://host.docker.internal:11434/v1
@@ -21,8 +21,8 @@ services:
 
   frontend:
     build:
-      context: ./frontend
-      dockerfile: Dockerfile
+      context: ../../frontend
+      dockerfile: ../deploy/docker/frontend/Dockerfile.prod
     ports:
       - "3000:3000"
     depends_on:
