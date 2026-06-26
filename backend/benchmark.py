@@ -6,14 +6,17 @@ import argparse
 from unittest.mock import MagicMock
 
 # Ensure backend modules can be imported
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(backend_dir)
+sys.path.append(os.path.join(backend_dir, "src"))
 
-from agent.planner import create_plan
-from agent.executor import execute_step
-from agent.validator import validate_step
-from agent.memory import retrieve_similar_task, store_task, MEMORY_FILE
-from agent.telemetry import telemetry
-from rag.retrieve import init_retriever
+# Import from domain services (DDD layout)
+from src.domain.services.planner import create_plan
+from src.domain.services.executor import execute_step
+from src.domain.services.validator import validate_step
+from src.domain.services.memory import retrieve_similar_task, store_task, MEMORY_FILE
+from src.domain.services.telemetry import telemetry
+from src.adapters.rag.retrieve import init_retriever
 
 BENCHMARK_PROMPTS = [
     "Hello there! Who are you?",
@@ -78,13 +81,13 @@ def run_benchmark(mock=False):
 
 def setup_mocks():
     """Mocks the LLM calls to avoid dependency on Ollama during testing."""
-    import agent.planner
-    import agent.executor
+    import src.domain.services.planner as planner_mod
+    import src.domain.services.executor as executor_mod
     
-    # Mock OpenAI client
+    # Mock OpenAI client setup to avoid external API dependencies
     mock_client = MagicMock()
-    agent.planner.get_openai_client = MagicMock(return_value=mock_client)
-    agent.executor.get_openai_client = MagicMock(return_value=mock_client)
+    planner_mod.get_openai_client = MagicMock(return_value=mock_client)
+    executor_mod.get_openai_client = MagicMock(return_value=mock_client)
     
     # Mock Response handler
     def mock_llm_response(*args, **kwargs):
