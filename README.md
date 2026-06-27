@@ -196,13 +196,13 @@ This executes test prompts through the planner, executor, and validator nodes, v
 
 ---
 
-## 📚 Documentation
+## Documentation
 
 For a complete architectural breakdown, codebase analysis, and technical due diligence report, please read the [Technical Analysis Report](docs/technical_analysis.md).
 
 ---
 
-## 🔮 Future Work & Roadmap
+## Future Work & Roadmap
 
 ### Addressing Sci-Bot Limitations
 Sci-Hub recently launched an experimental AI assistant (**Sci-Bot**) to answer questions from its archives. However, early evaluations reveal significant limitations in its performance:
