@@ -52,7 +52,7 @@ Evaluates claims, constraints, and experimental settings against academic baseli
 
 ---
 
-## ⚙️ Dynamic System Architecture
+##  Dynamic System Architecture
 
 The platform processes papers through a multi-tier agent loop. The state graph, citations, and execution telemetry are rendered dynamically on the dashboard.
 
@@ -88,7 +88,7 @@ flowchart TD
 
 ---
 
-## 🛠️ Technology Stack
+##  Technology Stack
 
 | Layer | Technologies | Description |
 | :--- | :--- | :--- |
@@ -101,7 +101,7 @@ flowchart TD
 
 ---
 
-## 🚀 Quick Start Guide
+##  Quick Start Guide
 
 ### Containerized Execution (Recommended)
 Launch the entire containerized application suite instantly using our Makefile:
@@ -181,7 +181,7 @@ Open `http://localhost:5173` in your browser.
 
 ---
 
-## 📊 Run Benchmarks & Telemetry
+##  Run Benchmarks & Telemetry
 
 To evaluate agent performance metrics and generate mock data for the telemetry dashboard:
 
