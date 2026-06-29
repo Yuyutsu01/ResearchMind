@@ -8,7 +8,16 @@
     "build": "vite build",
     "preview": "vite preview"
   },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "d3": "^7.8.5"
+  },
   "devDependencies": {
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "@vitejs/plugin-react": "^4.2.1",
+    "@types/react": "^18.2.55",
+    "@types/react-dom": "^18.2.19"
   }
 }
+
