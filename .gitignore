@@ -1,0 +1,125 @@
+# ==========================================
+# Python & Pytest Cache
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.nyc_output/
+.eslintcache
+.stylelintcache
+
+# ==========================================
+# Virtual Environments
+# ==========================================
+venv/
+.venv/
+env/
+ENV/
+backend/venv/
+backend/src/venv/
+
+# ==========================================
+# Node.js & Javascript Build Tools
+# ==========================================
+node_modules/
+frontend/node_modules/
+dist/
+build/
+out/
+coverage/
+.cache/
+.parcel-cache/
+.next/
+.turbo/
+.vite/
+dist-ssr/
+
+# ==========================================
+# Logs
+# ==========================================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ==========================================
+# Environment Variables & Secrets
+# ==========================================
+.env
+.env.*
+!.env.example
+credentials.json
+service-account.json
+firebase-adminsdk.json
+*.pem
+*.key
+*.pub
+token.json
+
+# ==========================================
+# OS Metadata
+# ==========================================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==========================================
+# Editor Settings (JetBrains / Visual Studio)
+# ==========================================
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ==========================================
+# Databases & SQLite
+# ==========================================
+*.sqlite
+*.db
+backend/research_platform.db
+research_platform.db
+
+# ==========================================
+# Temporary Files
+# ==========================================
+tmp/
+temp/
+*.tmp
+
+# ==========================================
+# AI Model Checkpoints & Large Data
+# ==========================================
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+data/
+datasets/
+raw/
+processed/
+checkpoints/
+
+# ==========================================
+# Project Specific (Agent / RAG Artifacts)
+# ==========================================
+backend/rag/documents/
+backend/memory.json
+backend/agent_memory.json
+backend/q_table.json
+backend/reports/
+backend/uploads/
+q_table.json
+reports/
+goals.txt
+memory.json
+notes.txt
+backend/notes.txt
+test_planner.py
