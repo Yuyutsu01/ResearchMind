@@ -69,9 +69,10 @@ Thumbs.db
 Desktop.ini
 
 # ==========================================
-# Editor Settings (JetBrains / Visual Studio)
+# Editor Settings (JetBrains / Visual Studio / VS Code)
 # ==========================================
 .idea/
+.vscode/
 *.iml
 *.suo
 *.ntvs*
