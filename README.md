@@ -138,3 +138,11 @@ cd backend
 $env:PYTHONPATH="."
 python -m pytest tests/test_swarm.py
 ```
+
+---
+
+## 📚 References
+
+This architecture was designed and implemented under the inspiration of:
+* **SwarmSys**: *Ruohao Li, Hongjun Liu, et al. "SwarmSys: Decentralized Swarm-Inspired Agents for Scalable and Adaptive Reasoning."* arXiv preprint arXiv:2510.10047 (2025). 
+* **Stigmergetic Pheromones**: The decentralized coordination of autonomous agents via indirect environmental modification (stigmergy) and pheromone-inspired updates (event bus triggers).
