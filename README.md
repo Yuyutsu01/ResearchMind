@@ -1,219 +1,140 @@
-# Research Intelligence Platform
+# ResearchMind Swarm v1
+> **Autonomous Research Intelligence Platform powered by Stigmergetic Swarm Coordination & Reinforcement Learning Strategy.**
 
-### *Transforming Scientific Literature into Interactive Knowledge*
-
-An AI-powered research platform that helps users analyze, deconstruct, compare, and explore scientific papers through multi-agent orchestration, citation networks, and reinforcement learning optimization.
-
----
-
-## 🎬 Project Demonstration
-
-Below is an animated walkthrough of the Research Intelligence Platform showing dashboard navigation, interactive citation networks, technical concept explorer grids, and research opportunity matrices:
-
-![Application walkthrough](assets/demo.webp)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![Next.js](https://img.shields.io/badge/Frontend-Next.js%20(TS)-000000?style=flat-square&logo=nextdotjs&logoColor=white)](https://nextjs.org)
+[![Stable-Baselines3](https://img.shields.io/badge/RL-Stable--Baselines3-FF6F61?style=flat-square&logo=gymnasium&logoColor=white)](https://stable-baselines3.readthedocs.io)
+[![Qdrant](https://img.shields.io/badge/VectorDB-Qdrant-D32F2F?style=flat-square&logo=qdrant&logoColor=white)](https://qdrant.tech)
+[![PostgreSQL](https://img.shields.io/badge/DB-PostgreSQL-336791?style=flat-square&logo=postgresql&logoColor=white)](https://www.postgresql.org)
+[![Redis](https://img.shields.io/badge/Cache-Redis-DC382D?style=flat-square&logo=redis&logoColor=white)](https://redis.io)
 
 ---
 
-## 💡 Why This Project?
+## 🔬 Architectural Philosophy & Bio-Inspiration
 
-### The Problem
-*   **Reading Friction:** Scientific papers are structured for traditional print rather than interactive consumption.
-*   **Knowledge Fragmentation:** Research insights, experimental datasets, and citation structures remain isolated.
-*   **Time-Intense Surveys:** Drafting literature reviews requires manually locating, reading, and synthesizing dozens of abstracts.
-*   **Undetected Research Gaps:** Finding methodology limitations or missing evaluations is difficult and error-prone.
-*   **Summarization Fallacy:** Standard AI assistants provide generic summaries that lose math, equations, and structure context.
+ResearchMind Swarm v1 is inspired by the **SwarmSys** paper and the biological concept of **Ant Pheromone Stigmergy**. 
 
-### The Solution
-The **Research Intelligence Platform** transforms research papers into interactive knowledge through AI-powered analysis, visualization, and reasoning. It leverages specialized agents to extract concepts, trace citation lineages, and map research opportunities.
+Traditional multi-agent frameworks rely on rigid, hardcoded DAG pipelines (e.g. LangGraph chains) or monolithic coordinators which cascade failure when a single API call errors out. Instead, ResearchMind Swarm treats research as an adaptive, non-linear process coordinated via environmental modification.
 
----
-
-## 🖥️ Visual Feature Walkthrough
-
-### 1. Executive Research Brief Dashboard
-The main dashboard displays an executive summary, problem statement, proposed solution, key innovations, and a reading roadmap for the active paper. It also lists real-time agent execution telemetry (such as planning, execution, and validation latencies).
-
-![Executive Brief Dashboard](assets/dashboard.png)
-
-### 2. Literature Review & Paper Deconstruction
-Automatically compiles comparative reviews and methodology syntheses from retrieved context. The deconstruction interface breaks down the paper's core problem, motivation, experimental settings, and constraints into expandable, structured accordions.
-
-![Paper Deconstruction Panel](assets/literature_review.png)
-
-### 3. Interactive Citation Influence Network
-Generates node-link citation diagrams using D3.js. Nodes are sized dynamically based on their PageRank centrality to showcase their academic influence in the local citation network. A vertical chronological timeline tracks historic lineage.
-
-![Citation Influence Network](assets/citation_graph.png)
-
-### 4. Autonomous Research Gap Detection
-Evaluates claims, constraints, and experimental settings against academic baselines. It flags missing evaluations, baseline flaws, or potential thesis directions, scoring each opportunity based on **Impact**, **Novelty**, and **Difficulty**.
-
-![Research Gap Matrix](assets/gap_detection.png)
-
----
-
-##  Dynamic System Architecture
-
-The platform processes papers through a multi-tier agent loop. The state graph, citations, and execution telemetry are rendered dynamically on the dashboard.
-
-```mermaid
-flowchart TD
-    UserRequest[User Request / Paper Upload] --> supervisor{Agent Supervisor}
-    
-    subgraph "Agent Loop (LangGraph StateGraph)"
-        supervisor -->|Route| doc_agent[Document Agent]
-        supervisor -->|Route| concept_agent[Concept Explorer]
-        supervisor -->|Route| retrieval_agent[RAG Retrieval Agent]
-        supervisor -->|Route| expansion_agent[Knowledge Expansion Agent]
-        supervisor -->|Route| validator_agent[Validation Agent]
-        supervisor -->|Route| report_agent[Report Generation Agent]
-    end
-    
-    subgraph "Data & Optimization"
-        retrieval_agent <-->|Dense/Lexical Query| FAISS[(FAISS & BM25 Retriever)]
-        validator_agent -->|Verify Citations| db[(SQLite DB)]
-        supervisor <-->|Choose Source & Depth| RL[Q-Learning Policy Engine]
-    end
-    
-    report_agent -->|Return State| Output[Dashboard Render & Document Export]
+```
+       [Agent A] 
+           │
+           │ (depose "pheromone" event)
+           ▼
+┌──────────────────────────────────────┐
+│          Research Blackboard         │  <--- Environment Substrate
+│  [Working Memory]  [Event Queue]     │
+└──────────────────────────────────────┘
+           ▲
+           │ (senses pheromone, wakes up)
+           │
+       [Agent B]
 ```
 
-### LangGraph Multi-Agent Orchestration Flow:
-1.  **Document Analysis Node:** Parses structure and equations from multi-column PDFs using [pdf_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/adapters/tools/pdf_tool.py).
-2.  **Concept Extraction Node:** Isolates terms, definitions, and traces variable structures using [concept_explorer.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/domain/services/concept_explorer.py).
-3.  **Research Retrieval Node:** Performs hybrid vector/keyword searches using [retrieve.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/adapters/rag/retrieve.py).
-4.  **Knowledge Expansion Node:** Fetches external bibliographic contexts using [expansion_agent.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/domain/services/expansion_agent.py).
-5.  **Validation Node:** Verifies factual claims and checks citations for hallucinations using [validator.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/domain/services/validator.py).
-6.  **Report Generation Node:** Compiles final latex, docx, and pptx presentations using [export_tool.py](file:///c:/Users/shiva/OneDrive/Desktop/projects/Autonomous-Multi-Tool-Agent/backend/src/adapters/tools/export_tool.py).
+### Stigmergy & Event Pheromones
+In nature, ants coordinate by depositing chemical traces (pheromones) in the physical environment. Other ants detect these traces and adjust their trajectories, producing complex emergent behaviors. 
+
+In ResearchMind Swarm v1, this is represented by:
+* **The Research Blackboard**: The shared environment substrate. It holds the active Knowledge Graph, Citation Graph, Task Queue, and Session state.
+* **The Event Bus (Redis Streams / AsyncIO)**: Represents the pheromone dispersion network. When an agent performs a task, it modifies the Blackboard and emits an Event (e.g. `NEW_PAPER_FOUND`, `PAPER_ANALYZED`, `CONTRADICTION_FOUND`).
+* **Task Scheduler (Priority Queue)**: Subscribed agents sense these events, prioritize task entries, and enqueue execution, letting complex workflows emerge without direct agent-to-agent coupling.
 
 ---
 
-##  Technology Stack
+## 🧠 Memory Tiering Specification
 
-| Layer | Technologies | Description |
-| :--- | :--- | :--- |
-| **Frontend UI** | Vanilla JS, HTML5, CSS3, Vite | SPA Dashboard with D3.js and WebSockets client. |
-| **Backend API** | FastAPI, Python, WebSockets, Uvicorn | High-performance asynchronous endpoint router. |
-| **Agent Core** | LangGraph, StateGraph Orchestrator | Coordinates state transitions and agent actions. |
-| **Retrieval (RAG)** | FAISS, sentence-transformers, rank-bm25 | Hybrid semantic/lexical search with RRF reranking. |
-| **Databases** | SQLite (default), PostgreSQL, Redis | Relational storage for tasks, telemetry, and Q-tables. |
-| **RL Engine** | Custom Q-Learning Engine | Optimizes source selections and search depths. |
+To manage large contexts, information is divided into four memory layers:
+1. **Working Memory (Research Blackboard)**: In-RAM and Redis Cache. Volatile, low-latency workspace for active sessions. Auto-checkpoints to PostgreSQL as a snapshot.
+2. **Semantic Memory (Qdrant)**: High-dimensional vector database. Embeds paper chunks and scrapes (via SentenceTransformers) for semantic RAG retrieval filtered by `session_id`.
+3. **Knowledge Memory (NetworkX)**: Directed graph in RAM representing scientific taxonomies, methods, formulas, and citation lineage. Serialized periodically to PostgreSQL JSONB.
+4. **Relational Memory (PostgreSQL)**: Long-term ACID database containing user histories, project sessions, and performance telemetry metrics.
 
 ---
 
-##  Quick Start Guide
+## 🚦 Research State Machine
 
-### Containerized Execution (Recommended)
-Launch the entire containerized application suite instantly using our Makefile:
+Execution flow is governed by a centralized state machine visible on the client interface:
+```
+[IDLE] ──> [SEARCHING] ──> [READING] ──> [VERIFYING] ──> [SYNTHESIZING] ──> [QUESTIONING_USER] ──> [COMPLETE]
+```
+* **SEARCHING**: Explorer Agent queries academic databases and does citation walks.
+* **READING**: Analyst Agent parses PDFs (via PyMuPDF) and extracts formulas, concepts, and experimental bounds.
+* **VERIFYING**: Critic Agent runs validation checks, detects contradictions, and adjusts confidence.
+* **SYNTHESIZING**: Synthesizer Agent consolidates duplicate concepts and updates NetworkX graphs.
+* **QUESTIONING_USER**: UI Agent pauses research to request user-in-the-loop choices.
 
-1.  **Ensure Docker Desktop is running** on your system.
-2.  Clone the repository and navigate to the root directory:
-    ```bash
-    git clone https://github.com/yuyutsu01/ResearchMind.git
-    cd ResearchMind
-    ```
-3.  Launch the development environment (with hot-reloading):
-    *   **Using Makefile (macOS/Linux):**
-        ```bash
-        make dev
-        ```
-    *   **Using Docker Compose directly (Windows / without Make):**
-        ```bash
-        docker compose -f deploy/docker/docker-compose.dev.yml up --build
-        ```
-
-    *Alternatively, launch the optimized production build:*
-    *   **Using Makefile (macOS/Linux):**
-        ```bash
-        make prod
-        ```
-    *   **Using Docker Compose directly (Windows / without Make):**
-        ```bash
-        docker compose -f deploy/docker/docker-compose.prod.yml up --build -d
-        ```
-4.  Access the web dashboard in your browser at `http://localhost:3000`.
+The next optimal action at each loop is predicted by a **Stable-Baselines3 PPO Strategist** trained on budget, graph completeness, and claim confidence rewards.
 
 ---
 
-### Manual Local Setup (Alternative)
+## 📊 Telemetry Metrics Framework
 
-If you prefer to run the components locally outside of Docker:
-
-#### 1. Setup Backend
-1.  Navigate to the `backend` folder:
-    ```bash
-    cd backend
-    ```
-2.  Create and activate a virtual environment:
-    ```bash
-    python -m venv venv
-    # Windows
-    .\venv\Scripts\activate
-    # macOS/Linux
-    source venv/bin/activate
-    ```
-3.  Install dependencies:
-    ```bash
-    pip install -r requirements.txt
-    ```
-4.  Run the API server:
-    ```bash
-    python app.py
-    ```
-
-The API will be available at `http://localhost:8000`.
-
-#### 2. Setup Frontend
-1.  Navigate to the `frontend` folder:
-    ```bash
-    cd ../frontend
-    ```
-2.  Install dependencies:
-    ```bash
-    npm install
-    ```
-3.  Run the Vite development server:
-    ```bash
-    npm run dev
-    ```
-
-Open `http://localhost:5173` in your browser.
+The platform actively tracks 5 key metrics logged in PostgreSQL and streamed live over WebSockets:
+1. **Task Completion Rate (TCR)**: Evaluates if the session successfully generated a validated research summary without breaching resource constraints.
+2. **Autonomy Score**: Ratio of steps executed autonomously without requiring human clarification.
+3. **Answer Grounding Score**: Percentage of synthesized claims backed by direct citations and RAG context matches.
+4. **Hallucination Rate**: Ratio of generated claims flagged as unsupported or inconsistent by the Critic.
+5. **Cost per Session**: Cumulative cost (USD) computed from LLM input/output tokens and API calls.
 
 ---
 
-##  Run Benchmarks & Telemetry
+## 🛠️ Technology Stack
 
-To evaluate agent performance metrics and generate mock data for the telemetry dashboard:
-
-1.  Activate the backend virtual environment.
-2.  Navigate to the `backend` directory:
-    ```bash
-    cd backend
-    ```
-3.  Run the benchmark suite:
-    ```bash
-This executes test prompts through the planner, executor, and validator nodes, verifying latency constraints and saving records in `research_platform.db`.
-
----
-
-## Documentation
-
-For a complete architectural breakdown, codebase analysis, and technical due diligence report, please read the [Technical Analysis Report](docs/technical_analysis.md).
+| Component | Technology | Purpose |
+| --- | --- | --- |
+| **Backend** | Python 3.12+ / FastAPI | Async REST APIs & WebSocket streaming |
+| **Frontend** | Next.js (React + TypeScript) | Responsive UI with Tailwind CSS & Shadcn UI |
+| **Graph Visualizer** | Cytoscape.js | Citation & Knowledge Graph rendering |
+| **Vector DB** | Qdrant | Semantic memory search |
+| **RDBMS** | PostgreSQL | Relational storage & state snapshots |
+| **Cache/Bus** | Redis / AsyncIO | Caching and event stream |
+| **Graph Engine** | NetworkX | In-memory Knowledge Graph manipulation |
+| **Document Parser** | PyMuPDF (Fitz) | Section extraction |
+| **RL Engine** | Stable-Baselines3 (PPO) / PyTorch | Strategic action optimization |
 
 ---
 
-## Future Work & Roadmap
+## 🚀 Getting Started
 
-### Addressing Sci-Bot Limitations
-Sci-Hub recently launched an experimental AI assistant (**Sci-Bot**) to answer questions from its archives. However, early evaluations reveal significant limitations in its performance:
-*   **Weak Multi-Turn Conversations:** Struggles to maintain deep context over multi-turn dialogues.
-*   **Limited Access to Newer Papers:** Restricted to older literature with slow database updates.
-*   **Weak Reference Relevance:** Citations provided are frequently not the most relevant to the query context.
-*   **Low Research Assistance Capability:** Still far from replacing or effectively aiding a serious researcher.
+### Prerequisites
+* Docker & Docker Desktop
+* Make (optional, for shortcut targets)
 
-We aim to directly resolve these gaps with the following roadmap items:
-*   **Long-Context Orchestration:** Upgrade the LangGraph state loop to maintain deep conversational state and context history across long, multi-turn dialogues.
-*   **Dynamic Literature Sync:** Connect real-time retrieval agents to ArXiv, PubMed, and Semantic Scholar to query and ingest newly published papers on-demand.
-*   **PageRank Reranking Optimization:** Integrate PageRank centrality scoring directly into our hybrid RRF (Reciprocal Rank Fusion) reranker to prioritize the most academically influential references.
-*   **Serious Researcher Co-Pilot:** Extend the validation agent with deeper mathematical and empirical fact-checking, making it a reliable partner for advanced academic research.
+### Setup & Run
+1. Configure your local environment by creating a `.env` file at the root:
+   ```env
+   # PostgreSQL Relational Connection
+   DATABASE_URL=postgresql://postgres:postgres@localhost:5432/researchmind
 
+   # Redis Caching Connection
+   REDIS_URL=redis://localhost:6379/0
+
+   # Qdrant Vector Connection
+   QDRANT_HOST=localhost
+   QDRANT_PORT=6333
+
+   # LLM Settings (Ollama / Custom)
+   LLM_BASE_URL=http://localhost:11434/v1
+   LLM_API_KEY=ollama
+   LLM_MODEL=llama3
+   ```
+2. Build and launch the environment:
+   ```bash
+   make dev
+   ```
+   *(Or: `docker-compose -f deploy/docker-compose.yml up --build`)*
+3. Access the interfaces:
+   * **Frontend Dashboard**: `http://localhost:3000`
+   * **API Docs**: `http://localhost:8000/docs`
+   * **Stop stack**: `make down`
+
+---
+
+## 🧪 Testing
+
+Run backend Swarm tests using `pytest` inside the virtual environment:
+```bash
+cd backend
+$env:PYTHONPATH="."
+python -m pytest tests/test_swarm.py
+```
