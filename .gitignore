@@ -20,6 +20,11 @@ ENV/
 backend/venv/
 backend/src/venv/
 
+# Private Credentials & Local Envs
+.env
+.env.*
+.env.local
+
 # ==========================================
 # Node.js & Javascript Build Tools
 # ==========================================

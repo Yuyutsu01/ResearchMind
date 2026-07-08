@@ -1,18 +1,13 @@
-.PHONY: dev prod down logs
+.PHONY: dev down logs
 
-# Run development environment
+# Run environment
 dev:
-	docker-compose -f deploy/docker/docker-compose.dev.yml up --build
-
-# Run production environment
-prod:
-	docker-compose -f deploy/docker/docker-compose.prod.yml up --build -d
+	docker-compose -f deploy/docker-compose.yml up --build
 
 # Stop all containers
 down:
-	docker-compose -f deploy/docker/docker-compose.dev.yml down
-	docker-compose -f deploy/docker/docker-compose.prod.yml down
+	docker-compose -f deploy/docker-compose.yml down
 
-# View logs for production
+# View logs
 logs:
-	docker-compose -f deploy/docker/docker-compose.prod.yml logs -f
+	docker-compose -f deploy/docker-compose.yml logs -f
