@@ -6,8 +6,8 @@ import TelemetryMetrics from "@/components/TelemetryMetrics";
 import CytoscapeGraph from "@/components/CytoscapeGraph";
 import QuizSection from "@/components/QuizSection";
 
-const API_BASE = "http://localhost:8000";
-const WS_BASE = "ws://localhost:8000";
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8001";
+const WS_BASE = API_BASE.replace(/^http/, "ws");
 
 interface LogItem {
   agent: string;
