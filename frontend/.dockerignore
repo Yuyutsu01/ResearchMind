@@ -1,5 +1,0 @@
-# Local dependencies and build outputs in frontend context
-node_modules
-dist
-build
-*.log
