@@ -1,64 +1,63 @@
-# ResearchMind Swarm v1 - System Architecture
+# ResearchMind System Architecture
 
-This document specifies the event-driven swarm architecture of the Research Intelligence Platform.
-
----
-
-## 1. Core Architectural Pillars
-
-The platform is designed around four main components:
-1. **Research Blackboard**: The shared working memory containing:
-   - **Working Memory**: Dynamic facts and concept states.
-   - **Event Queue**: Buffered messages waiting for processing.
-   - **Active Tasks**: Current operational queue.
-   - **Session Context**: Research queries, parameters, and constraints.
-   - **Session State**: Current configuration and active connections.
-2. **Task Scheduler**: A priority queue scheduler that reads events from the Event Queue and schedules agent activations. It abstracts high-level RL actions into executable agent instructions.
-3. **Agent Registry**: Registers agent instances, their event subscriptions, and capabilities dynamically.
-4. **Stable-Baselines3 PPO Strategist**: The sequential decision engine deciding optimal actions (e.g., `SEARCH_PAPERS`, `ANALYZE_PAPER`, `VERIFY_CLAIM`, `CONNECT_CONCEPTS`, `CLARIFY_USER`, `TERMINATE`).
+This document describes the design, data flows, and module interactions of **ResearchMind**.
 
 ---
 
-## 2. Research State Machine
+## 1. High-Level Diagram
 
-To track system execution, a centralized state machine transitions through the following phases:
-
-```mermaid
-stateDiagram-v2
-    [*] --> IDLE
-    IDLE --> SEARCHING : User query submitted / Explorer waked
-    SEARCHING --> READING : Explorer completed / Analyst waked
-    READING --> VERIFYING : Analyst completed / Critic waked
-    VERIFYING --> SYNTHESIZING : Critic completed / Synthesizer waked
-    SYNTHESIZING --> QUESTIONING_USER : Clarification required / UI waked
-    QUESTIONING_USER --> SEARCHING : User feedback received
-    SYNTHESIZING --> COMPLETE : Confidence threshold reached / Strategist terminated
-    COMPLETE --> [*]
+```text
+                     ┌────────────────────────┐
+                     │    Next.js Frontend    │
+                     │  (TypeScript, Tailwind)│
+                     └───────────┬────────────┘
+                                 │ REST / WebSockets
+                                 ▼
+                     ┌────────────────────────┐
+                     │    FastAPI Gateway     │
+                     │   (src/main.py)        │
+                     └───────────┬────────────┘
+                                 │
+         ┌───────────────────────┴───────────────────────┐
+         ▼                                               ▼
+┌──────────────────┐                            ┌──────────────────┐
+│ Swarm Orchestrator│                            │Background Ingestion│
+│ (orchestrator.py)│                            │ (background_worker)│
+└────────┬─────────┘                            └────────┬─────────┘
+         │                                               │
+   ┌─────┼─────────────┐                           ┌─────┴─────┐
+   ▼     ▼             ▼                           ▼           ▼
+[Math] [Vision] [Explanation]                 [PyMuPDF]    [Qdrant]
+Agent  Agent       Agent                       Parser      Embedder
 ```
-
-* **IDLE**: The system is waiting for a research query or document upload.
-* **SEARCHING**: The Explorer Agent queries academic APIs (arXiv, Semantic Scholar) and performs citation crawls.
-* **READING**: The Analyst Agent parses full text via PyMuPDF/GROBID and extracts structured concepts, methods, equations, and experimental baselines.
-* **VERIFYING**: The Critic Agent cross-checks claims, identifies contradictions, evaluates evidence strength, and runs hallucination checks.
-* **SYNTHESIZING**: The Synthesizer Agent clusters concepts, aggregates paper connections, and updates the global NetworkX knowledge graph.
-* **QUESTIONING_USER**: The UI Agent prompts the user for clarification when the Strategist detects critical contradictions or missing objectives.
-* **COMPLETE**: The final research narrative is compiled, exported (LaTeX, Word, Slides, PDF), and the session is archived in PostgreSQL.
 
 ---
 
-## 3. Asynchronous Event-Driven Flow
+## 2. Component Layout
 
-```
-[Explorer Agent] ──(NEW_PAPER_FOUND)──> [Event Queue] ──> [Task Scheduler]
-                                                                │
-                                                         (Map to Analyst)
-                                                                │
-                                                                ▼
-                                                        [Analyst Agent]
-```
+ResearchMind is structured as a **modular monolith** to maximize development velocity while maintaining strict separation of concerns.
 
-1. **Event Trigger**: When an agent completes an operation, it writes the result to the Blackboard and publishes an Event.
-2. **Buffering**: The Event Bus pushes the event into the Blackboard's Event Queue.
-3. **Action Selection**: The RL Strategist observes the Blackboard's state (Resource Budget, Task Queue, Graph Completeness) and recommends an abstract action.
-4. **Scheduling**: The Task Scheduler reads the priority queue, pairs the recommended action with the pending event, and wakes up the selected agent from the Agent Registry.
-5. **Autosave Checkpointing**: After every state change, the Memory Keeper commits the memory state to PostgreSQL as a snapshot.
+### 2.1 Backend Modules (`backend/src`)
+* **`adapters/api`**: Houses REST routes (`routes.py`) for session management, file uploads, and notebook logging, alongside WebSocket connections (`websocket.py`) for interactive selections.
+* **`adapters/db`**: Connectors for PostgreSQL (`postgres.py`) storage of layout blocks, Redis Cache (`redis_cache.py`) for low-latency JSON lookups, and Qdrant (`qdrant.py`) for vector embeddings.
+* **`domain/parser`**: Coordinates coordinates parsing (`pdf_parser.py`) utilizing PyMuPDF (`fitz`).
+* **`domain/swarm`**: Core AI swarm containing `orchestrator.py` and specialized experts (`agents.py`).
+
+### 2.2 Frontend Components (`frontend/src`)
+* **`app/`**: Next.js App Router workspace mounting `page.tsx` and custom global CSS.
+* **`components/`**: Renders `ReadingWorkspace.tsx` featuring the IntersectionObserver virtualization canvas layers.
+
+---
+
+## 3. Data Ingestion Flow
+
+1. User uploads a scientific PDF.
+2. FastAPI saves the PDF under `uploads/` and returns the session ID instantly (<50ms).
+3. Background progressive parser executes **Pass 1**:
+   * Scans text blocks and layout shapes.
+   * Maps relative coordinates and inserts layout elements into PostgreSQL.
+   * Dispatches `SECTIONS_READY` WS message to client.
+4. When a user scrolls to a page:
+   * Client sends a `page_visible` event.
+   * Ingestion queue prioritizes generating embeddings for that page's text blocks (**Pass 2**).
+   * Embeddings are upserted to Qdrant.
