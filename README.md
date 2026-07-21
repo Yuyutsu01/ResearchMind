@@ -19,6 +19,32 @@ The paper remains central and visible at all times. Every sentence, equation, fi
 
 ---
 
+## 🔬 Architectural Philosophy & Bio-Inspiration
+
+ResearchMind Swarm v1 is inspired by the **SwarmSys** paper and the biological concept of **Ant Pheromone Stigmergy**.
+
+Traditional multi-agent frameworks rely on rigid, hardcoded DAG pipelines (e.g. LangGraph chains) or monolithic coordinators which cascade failure when a single API call errors out. Instead, ResearchMind Swarm treats research as an adaptive, non-linear process coordinated via environmental modification.
+
+```text
+       [Agent A] 
+           │
+           │ (depose "pheromone" event)
+           ▼
+┌──────────────────────────────────────┐
+│          Research Blackboard         │  <--- Environment Substrate
+│  [Working Memory]  [Event Queue]     │
+└──────────────────────────────────────┘
+           ▲
+           │ (senses pheromone, wakes up)
+           │
+       [Agent B]
+```
+
+### Stigmergy & Event Pheromones
+In nature, ants coordinate by depositing chemical traces (pheromones) in the physical environment. Other ants detect these traces and adjust their trajectories, producing complex emergent behaviors.
+
+---
+
 ## 🏗️ System Architecture & Progressive Pipeline
 
 ResearchMind is built as a **modular monolith** optimized for low-latency, desktop-like responsiveness:
