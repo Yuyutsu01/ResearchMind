@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+:root {
+  --background: #121212;
+  --foreground: #f1f3f4;
+  --card: #1e1e1e;
+  --card-hover: #292a2d;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-glow: rgba(53, 182, 255, 0.25);
+  
+  --primary: #1a73e8;
+  --primary-hover: #1557b0;
+  --success: #1e8e3e;
+  --warning: #f9ab00;
+  --danger: #d93025;
+  
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+html,
+body,
+#__next {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: 'Outfit', sans-serif;
+}
+
+/* Glassmorphism styling */
+.glass-panel {
+  background: rgba(30, 30, 30, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+}
+
+/* Custom scrollbars */
+.scrollable::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+.scrollable::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.scrollable::-webkit-scrollbar-thumb {
+  background: #3c4043;
+  border-radius: 4px;
+}
+
+.scrollable::-webkit-scrollbar-thumb:hover {
+  background: #4f5255;
+}
+
+/* LaTeX KaTeX custom styling */
+.latex-math {
+  font-family: 'KaTeX_Math', 'Times New Roman', serif;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
