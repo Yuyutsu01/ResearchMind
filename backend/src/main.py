@@ -23,9 +23,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Mount static reports folder
+# Mount static folders
 os.makedirs("reports", exist_ok=True)
+os.makedirs("uploads", exist_ok=True)
 app.mount("/reports", StaticFiles(directory="reports"), name="reports")
+app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
 
 # Register routers
 app.include_router(rest_router)
