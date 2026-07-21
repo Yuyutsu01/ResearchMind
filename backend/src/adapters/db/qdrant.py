@@ -5,11 +5,11 @@ from sentence_transformers import SentenceTransformer
 
 QDRANT_HOST = os.environ.get("QDRANT_HOST", "localhost")
 QDRANT_PORT = int(os.environ.get("QDRANT_PORT", 6333))
-COLLECTION_NAME = "research_chunks"
+COLLECTION_NAME = "researchmind_chunks"
 
 class SemanticMemory:
     def __init__(self):
-        # Initialize the embedding model (Nominc Embed equivalent local fast model)
+        # Load local lightweight embedding model (dim=384)
         print("[Embedding Model] Loading sentence-transformer all-MiniLM-L6-v2...")
         self.encoder = SentenceTransformer("all-MiniLM-L6-v2")
         print("[Embedding Model] Loaded successfully.")
@@ -20,7 +20,7 @@ class SemanticMemory:
         self.init_collection()
 
     def init_collection(self):
-        """Initializes the vector collection if it does not exist."""
+        """Initializes the Qdrant collection if it does not exist."""
         try:
             collections = self.client.get_collections().collections
             collection_names = [col.name for col in collections]
