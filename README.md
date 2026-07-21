@@ -143,3 +143,10 @@ npm install
 npm run dev -- -p 3001
 ```
 Open **`http://localhost:3001`** in your browser to begin reading!
+
+---
+
+## References
+
+* [SwarmSys: Decentralized Swarm-Inspired Agents for Scalable and Adaptive Reasoning](https://arxiv.org/abs/2510.10047)
+
