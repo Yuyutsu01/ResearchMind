@@ -6,7 +6,11 @@ from contextlib import contextmanager
 DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://postgres:postgres@localhost:5432/researchmind")
 
 def init_db():
-    """Initializes the PostgreSQL database schema."""
+    """
+    Initializes the PostgreSQL database schema for ResearchMind.
+    Sets up tables for user sessions, parsed paper layout objects, 
+    relational citation links, notebooks, and user timelines.
+    """
     print("[PostgreSQL] Connecting to initialize database schema...")
     try:
         conn = psycopg2.connect(DATABASE_URL)
@@ -15,7 +19,6 @@ def init_db():
         # Enable UUID extension
         cursor.execute("CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";")
         
-        # Define tables
         queries = [
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -31,74 +34,7 @@ def init_db():
                 user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
                 prompt TEXT NOT NULL,
                 status VARCHAR(50) NOT NULL DEFAULT 'IDLE',
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS blackboard_checkpoints (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                blackboard_state JSONB NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS knowledge_graph (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                nodes JSONB NOT NULL DEFAULT '[]'::jsonb,
-                edges JSONB NOT NULL DEFAULT '[]'::jsonb,
-                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS confidence_claims (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                claim_text TEXT NOT NULL,
-                confidence_score REAL NOT NULL CHECK (confidence_score BETWEEN 0.0 AND 1.0),
-                evidence JSONB NOT NULL DEFAULT '[]'::jsonb,
-                status VARCHAR(50) NOT NULL DEFAULT 'PROVISIONAL',
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS hypotheses (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                hypothesis_text TEXT NOT NULL,
-                status VARCHAR(50) NOT NULL DEFAULT 'ACTIVE',
-                evidence JSONB NOT NULL DEFAULT '[]'::jsonb,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS telemetry_metrics (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                metric_name VARCHAR(100) NOT NULL,
-                value REAL NOT NULL,
-                unit VARCHAR(20) NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS reading_timeline (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                action_type VARCHAR(50) NOT NULL,
-                details JSONB NOT NULL,
-                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-            );
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS research_notebook (
-                id SERIAL PRIMARY KEY,
-                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
-                selection_text TEXT NOT NULL,
-                selection_type VARCHAR(30) NOT NULL,
-                ai_explanations JSONB NOT NULL,
-                user_note TEXT,
+                file_id VARCHAR(255),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
             """,
@@ -123,6 +59,26 @@ def init_db():
                 target_id VARCHAR(100) NOT NULL,
                 relationship_type VARCHAR(50) NOT NULL,
                 PRIMARY KEY (session_id, source_id, target_id, relationship_type)
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS research_notebook (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                selection_text TEXT NOT NULL,
+                selection_type VARCHAR(30) NOT NULL,
+                ai_explanations JSONB NOT NULL,
+                user_note TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS reading_timeline (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                action_type VARCHAR(50) NOT NULL,
+                details JSONB NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
             """
         ]
