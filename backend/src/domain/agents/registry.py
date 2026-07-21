@@ -35,3 +35,12 @@ class AgentRegistry:
 
 # Global Instance
 agent_registry = AgentRegistry()
+
+# Import agents to trigger self-registration on module load
+# (Placed at the bottom to avoid circular import issues)
+from src.domain.agents import explorer
+from src.domain.agents import analyst
+from src.domain.agents import critic
+from src.domain.agents import synthesizer
+from src.domain.agents import memory_keeper
+from src.domain.agents import ui_agent

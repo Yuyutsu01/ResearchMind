@@ -81,6 +81,49 @@ def init_db():
                 unit VARCHAR(20) NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS reading_timeline (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                action_type VARCHAR(50) NOT NULL,
+                details JSONB NOT NULL,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS research_notebook (
+                id SERIAL PRIMARY KEY,
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                selection_text TEXT NOT NULL,
+                selection_type VARCHAR(30) NOT NULL,
+                ai_explanations JSONB NOT NULL,
+                user_note TEXT,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS paper_objects (
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                id VARCHAR(100) NOT NULL,
+                type VARCHAR(50) NOT NULL,
+                page INTEGER NOT NULL,
+                bounding_box REAL[] NOT NULL,
+                parent_id VARCHAR(100),
+                text_content TEXT,
+                metadata JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (session_id, id)
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS object_relationships (
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                source_id VARCHAR(100) NOT NULL,
+                target_id VARCHAR(100) NOT NULL,
+                relationship_type VARCHAR(50) NOT NULL,
+                PRIMARY KEY (session_id, source_id, target_id, relationship_type)
+            );
             """
         ]
         

@@ -88,7 +88,7 @@ class ResearchBlackboard:
                 for edge in edges:
                     self.knowledge_graph.add_edge(edge["source"], edge["target"], **edge)
                     
-            # 4. Load Claims & Hypotheses
+            # 4. Load Claims
             claims_rows = execute_query(
                 "SELECT claim_text, confidence_score, evidence, status FROM confidence_claims WHERE session_id = %s",
                 (self.session_id,),
@@ -103,6 +103,22 @@ class ResearchBlackboard:
                         "status": c["status"]
                     }
                     for c in claims_rows
+                ]
+                
+            # 5. Load Hypotheses
+            hyp_rows = execute_query(
+                "SELECT hypothesis_text, status, evidence FROM hypotheses WHERE session_id = %s",
+                (self.session_id,),
+                fetch=True
+            )
+            if hyp_rows:
+                self.hypotheses = [
+                    {
+                        "hypothesis_text": h["hypothesis_text"],
+                        "status": h["status"],
+                        "evidence": json.loads(h["evidence"]) if isinstance(h["evidence"], str) else h["evidence"]
+                    }
+                    for h in hyp_rows
                 ]
         except Exception as e:
             print(f"[Blackboard Error] Failed to load session data from DB: {e}")
@@ -142,6 +158,14 @@ class ResearchBlackboard:
                 execute_query(
                     "INSERT INTO confidence_claims (session_id, claim_text, confidence_score, evidence, status) VALUES (%s, %s, %s, %s, %s)",
                     (self.session_id, c["claim_text"], c["confidence_score"], json.dumps(c["evidence"]), c["status"])
+                )
+                
+            # 5. Save Hypotheses
+            execute_query("DELETE FROM hypotheses WHERE session_id = %s", (self.session_id,))
+            for h in self.hypotheses:
+                execute_query(
+                    "INSERT INTO hypotheses (session_id, hypothesis_text, status, evidence) VALUES (%s, %s, %s, %s)",
+                    (self.session_id, h["hypothesis_text"], h["status"], json.dumps(h["evidence"]))
                 )
                 
             print(f"[Blackboard] Autosave checkpoint completed for Session #{self.session_id}.")

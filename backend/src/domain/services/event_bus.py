@@ -28,7 +28,7 @@ class EventBus:
                     payload={
                         "event_type": event_type,
                         "details": details,
-                        "paper_title": details.get("paper_title")
+                        "paper_title": details.get("paper_title") or details.get("title")
                     }
                 )
 

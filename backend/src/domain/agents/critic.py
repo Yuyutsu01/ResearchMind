@@ -25,7 +25,12 @@ class CriticAgent(BaseAgent):
         print(f"[Critic] Evaluating validity of claim: '{claim_text}'...")
         
         system_prompt = """You are a highly critical academic reviewer. Analyze the claim and the supporting literature context provided.
-Identify if the claim is fully supported, has contradictory evidence, or is a potential hallucination (not present in source documents).
+Classify the claim status into one of these categories:
+- "SUPPORTED": The claim is explicitly supported by, or fully consistent with, the provided literature context.
+- "WEAK_EVIDENCE": The literature context is too brief or does not mention the details of the claim, but does not contradict it. (Use this for general scientific facts or hypotheses that are simply not covered by the current search results abstracts).
+- "CONTRADICTED": The literature context contains facts or data that directly contradict the claim.
+- "HALLUCINATION": The claim invents fake papers, fake authors, or fake statistics that are completely made-up and absent from both the context and standard scientific consensus.
+
 Rate the claim confidence from 0.0 to 1.0. If there are contradictions, explain them in detail.
 Output ONLY a JSON object in the target structure. Do not wrap in markdown or output text other than JSON.
 
