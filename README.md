@@ -11,7 +11,7 @@
 
 ---
 
-## 🔬 Core Vision
+## Core Vision
 
 Instead of reading a research paper and constantly switching between ChatGPT, Google, Wikipedia, textbooks, and YouTube, researchers interact with the paper inside an intelligent workspace. 
 
@@ -19,7 +19,7 @@ The paper remains central and visible at all times. Every sentence, equation, fi
 
 ---
 
-## 🔬 Architectural Philosophy & Bio-Inspiration
+## Architectural Philosophy & Bio-Inspiration
 
 ResearchMind Swarm v1 is inspired by the **SwarmSys** paper and the biological concept of **Ant Pheromone Stigmergy**.
 
@@ -45,7 +45,7 @@ In nature, ants coordinate by depositing chemical traces (pheromones) in the phy
 
 ---
 
-## 🏗️ System Architecture & Progressive Pipeline
+## System Architecture & Progressive Pipeline
 
 ResearchMind is built as a **modular monolith** optimized for low-latency, desktop-like responsiveness:
 
@@ -93,7 +93,7 @@ A central **Swarm Orchestrator** manages user selection actions, activating only
 
 ---
 
-## 🛠️ Technology Stack
+## Technology Stack
 
 | Component | Technology | Purpose |
 | :--- | :--- | :--- |
@@ -108,7 +108,7 @@ A central **Swarm Orchestrator** manages user selection actions, activating only
 
 ---
 
-## 🚀 Getting Started
+## Getting Started
 
 ### 1. Set Up Environment Variables
 Create a `.env` file in the root workspace directory:
