@@ -8,6 +8,8 @@ from typing import Optional, List, Dict
 from src.adapters.db.postgres import execute_query
 from src.adapters.db.qdrant import semantic_memory
 
+from src.domain.services.task_queue import task_queue
+
 router = APIRouter(prefix="/api/v1")
 
 class SessionCreate(BaseModel):
@@ -63,20 +65,39 @@ async def create_session(req: SessionCreate):
         )
         session_id = rows[0]["id"]
         
+        task_id = None
         # If paper upload is attached, launch the progressive background parser task instantly
         if req.file_id:
             file_path = os.path.join("uploads", req.file_id)
             if os.path.exists(file_path):
+                task_id = task_queue.create_task(session_id, "ingestion_pipeline", {"file_id": req.file_id, "path": file_path})
                 from src.domain.services.background_worker import run_progressive_ingestion
-                asyncio.create_task(run_progressive_ingestion(session_id, file_path, req.file_id))
+                asyncio.create_task(run_progressive_ingestion(session_id, file_path, req.file_id, task_id=task_id))
                 
         return {
             "session_id": session_id,
+            "task_id": task_id,
             "status": "LOADING_PDF",
             "prompt": req.prompt
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to create session: {str(e)}")
+
+@router.get("/tasks/{task_id}")
+async def get_task_status(task_id: str):
+    """Retrieves background task status and progress metrics."""
+    task = task_queue.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    return {"success": True, "task": task}
+
+@router.post("/tasks/{task_id}/cancel")
+async def cancel_task(task_id: str):
+    """Cancels a running background task."""
+    success = task_queue.cancel_task(task_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="Task could not be cancelled")
+    return {"success": True, "message": f"Task #{task_id} cancelled."}
 
 @router.get("/sessions/{session_id}/paper")
 async def get_session_paper(session_id: int):

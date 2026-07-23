@@ -1,68 +1,107 @@
 import os
 import json
 import httpx
+from typing import Optional
+from dotenv import load_dotenv
+
+# Load environment variables from workspace root .env file
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../../.env"))
+load_dotenv()
+
 from src.adapters.db.redis_cache import redis_cache
+from src.adapters.llm_providers import (
+    OpenAIProvider,
+    GroqProvider,
+    GeminiProvider,
+    ClaudeProvider,
+    AzureProvider,
+    OllamaProvider
+)
 
 class LLMAdapter:
     """
-    LLM Client abstraction supporting multiple providers (OpenAI/Anthropic/Gemini) 
+    LLM Client abstraction supporting multiple providers (OpenAI/Groq/Gemini/Claude/Azure/Ollama) 
     with hot L1 Redis caching.
     """
     def __init__(self):
-        self.api_key = os.environ.get("OPENAI_API_KEY", "mock-key")
+        self.provider_name = os.environ.get("LLM_PROVIDER", "").lower()
+        self.base_url = os.environ.get("LLM_BASE_URL")
+        self.api_key = os.environ.get("LLM_API_KEY", os.environ.get("OPENAI_API_KEY", "mock-key"))
         self.model = os.environ.get("LLM_MODEL", "gpt-4o-mini")
 
-    def get_structured_json(self, cache_key: str, system_prompt: str, user_prompt: str) -> dict:
+        # Auto-detect provider based on base URL or key if not explicitly defined
+        if not self.provider_name:
+            if self.base_url and "groq.com" in self.base_url:
+                self.provider_name = "groq"
+            elif self.base_url and "openai.com" in self.base_url:
+                self.provider_name = "openai"
+            elif self.api_key != "mock-key" and self.api_key:
+                self.provider_name = "openai"
+            else:
+                self.provider_name = "mock"
+
+        print(f"[LLMAdapter] Instantiating provider abstraction: {self.provider_name} | Model: {self.model}")
+
+        self.provider = None
+        if self.provider_name == "openai" and self.api_key != "mock-key":
+            self.provider = OpenAIProvider(api_key=self.api_key, base_url=self.base_url)
+        elif self.provider_name == "groq" and self.api_key != "mock-key":
+            self.provider = GroqProvider(api_key=self.api_key, base_url=self.base_url)
+        elif self.provider_name == "gemini" and self.api_key != "mock-key":
+            self.provider = GeminiProvider(api_key=self.api_key)
+        elif self.provider_name == "claude" and self.api_key != "mock-key":
+            self.provider = ClaudeProvider(api_key=self.api_key)
+        elif self.provider_name == "azure" and self.api_key != "mock-key":
+            api_version = os.environ.get("AZURE_OPENAI_API_VERSION", "2023-05-15")
+            self.provider = AzureProvider(api_key=self.api_key, endpoint=self.base_url, api_version=api_version)
+        elif self.provider_name == "ollama":
+            self.provider = OllamaProvider(host_url=self.base_url)
+        else:
+            # Fallback to mock/synthetic responder
+            self.provider_name = "mock"
+
+    def get_structured_json(
+        self, 
+        cache_key: str, 
+        system_prompt: str, 
+        user_prompt: str, 
+        session_id: Optional[int] = None
+    ) -> dict:
         """
-        Sends system and user prompts to the LLM, returning a structured JSON object.
-        Checks Redis cache first to bypass network latency.
+        Sends system and user prompts to the configured LLM provider, returning a structured JSON.
+        Checks L1 Redis cache first to bypass network calls.
         """
+        from src.adapters.telemetry import telemetry
+
         # 1. L1 Cache Check
         cached_res = redis_cache.get(cache_key)
         if cached_res:
+            telemetry.record_cache_hit("redis_l1")
             print(f"[L1 Cache Hit] Found response for key '{cache_key}'.")
             return cached_res
             
-        print(f"[LLM Request] Cache miss. Contacting OpenAI ({self.model})...")
+        telemetry.record_cache_miss("redis_l1")
+            
+        # 2. Inject context from Agent Memory System if session_id is provided
+        if session_id and self.provider_name != "mock":
+            from src.domain.swarm.memory import agent_memory
+            mem_context = agent_memory.retrieve_context(session_id, user_prompt)
+            if mem_context:
+                system_prompt = system_prompt + f"\n\n[CONCURRENT RESEARCH CONTEXT & HISTORY]\n{mem_context}"
+                print(f"[Agent Memory] Injected memory context for Session #{session_id} into LLM prompt.")
+
+        print(f"[LLM Request] Cache miss. Routing call via provider: '{self.provider_name}'...")
         
-        # If API key is not configured, fallback to synthetic test responses
-        if self.api_key == "mock-key" or not self.api_key:
+        if self.provider_name == "mock" or not self.provider:
             synthetic_res = self.generate_synthetic_response(system_prompt, user_prompt)
             redis_cache.set(cache_key, synthetic_res)
             return synthetic_res
             
         try:
-            # Connect using httpx
-            headers = {
-                "Authorization": f"Bearer {self.api_key}",
-                "Content-Type": "application/json"
-            }
-            payload = {
-                "model": self.model,
-                "response_format": {"type": "json_object"},
-                "messages": [
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt}
-                ]
-            }
-            
-            with httpx.Client() as client:
-                res = client.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=30.0
-                )
-                if res.status_code == 200:
-                    data = res.json()
-                    content = data["choices"][0]["message"]["content"]
-                    parsed = json.loads(content)
-                    
-                    # Store in L1 cache
-                    redis_cache.set(cache_key, parsed)
-                    return parsed
-                else:
-                    raise Exception(f"OpenAI error: {res.text}")
+            parsed = self.provider.get_structured_json(system_prompt, user_prompt, self.model)
+            # Store in L1 cache
+            redis_cache.set(cache_key, parsed)
+            return parsed
         except Exception as e:
             print(f"[LLM Error] API request failed: {e}. Falling back to synthetic responder...")
             synthetic_res = self.generate_synthetic_response(system_prompt, user_prompt)

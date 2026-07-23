@@ -18,7 +18,7 @@ class ExplanationAgent(BaseAgent):
         cache_key = self.generate_cache_key(session_id, target_id, f"exp_{user_level}")
         system_prompt = f"Explain the text assuming the user is at level: {user_level}. Keep it clear and concise."
         user_prompt = f"Highlight: \"{text}\""
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class MathematicsAgent(BaseAgent):
     """Parses equations and step-by-step derivations."""
@@ -38,7 +38,7 @@ class MathematicsAgent(BaseAgent):
         }
         """
         user_prompt = f"Formula: {equation_text}"
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class BackgroundKnowledgeAgent(BaseAgent):
     """Identifies prerequisite concepts required to understand the target highlight."""
@@ -56,7 +56,7 @@ class BackgroundKnowledgeAgent(BaseAgent):
         }
         """
         user_prompt = f"Selected text: \"{text}\""
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class VisualTeachingAgent(BaseAgent):
     """Generates ASCII structural diagrams or flowchart animations."""
@@ -74,7 +74,7 @@ class VisualTeachingAgent(BaseAgent):
         }
         """
         user_prompt = f"Selected concept: \"{text}\""
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class FigureInterpretationAgent(BaseAgent):
     """Explains axes, trends, and takeaways from figures."""
@@ -93,7 +93,7 @@ class FigureInterpretationAgent(BaseAgent):
         }
         """
         user_prompt = f"Caption details: {caption}"
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class TableAnalysisAgent(BaseAgent):
     """Analyzes benchmark metrics in tables."""
@@ -112,7 +112,7 @@ class TableAnalysisAgent(BaseAgent):
         }
         """
         user_prompt = f"Table caption: {caption}"
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class CitationAgent(BaseAgent):
     """Resolves citation references and maps relationship links."""
@@ -131,7 +131,7 @@ class CitationAgent(BaseAgent):
         }
         """
         user_prompt = f"Citation callout: {citation_text}"
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class TerminologyAgent(BaseAgent):
     """Defines technical terms within paper contexts."""
@@ -149,7 +149,7 @@ class TerminologyAgent(BaseAgent):
         }
         """
         user_prompt = f"Term: {term}"
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 class QuestionPredictionAgent(BaseAgent):
     """Predicts user follow-up questions."""
@@ -166,7 +166,7 @@ class QuestionPredictionAgent(BaseAgent):
         }
         """
         user_prompt = f"Topic: {text}"
-        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt)
+        return llm_client.get_structured_json(cache_key, system_prompt, user_prompt, session_id=session_id)
 
 # Instantiate singletons for orchestrator
 explanation_agent = ExplanationAgent()

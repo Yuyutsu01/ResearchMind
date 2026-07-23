@@ -1,23 +1,23 @@
 import asyncio
 import os
 import json
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from src.adapters.db.postgres import execute_query
 from src.adapters.db.qdrant import semantic_memory
 from src.domain.parser.pdf_parser import scientific_parser
+from src.adapters.db.redis_session import redis_session
+from src.domain.services.task_queue import task_queue
 
-# Priority queue of pages requested by the client viewport
-page_priority_queue: Dict[int, asyncio.Queue] = {}
-
-async def run_progressive_ingestion(session_id: int, file_path: str, file_id: str):
+async def run_progressive_ingestion(session_id: int, file_path: str, file_id: str, task_id: Optional[str] = None):
     """
     Asynchronous progressive background worker executing the multi-stage ingestion pipeline.
     """
-    print(f"[Worker] Starting progressive ingestion for Session #{session_id}...")
+    print(f"[Worker] Starting progressive ingestion for Session #{session_id} (Task ID: {task_id})...")
+    if task_id:
+        task_queue.update_progress(task_id, 5.0, "Starting capability scan & parsing...", status="RUNNING")
     
-    # Ensure queue exists for this session
-    if session_id not in page_priority_queue:
-        page_priority_queue[session_id] = asyncio.Queue()
+    # Session queues are managed persistently in Redis
+    pass
         
     try:
         # --- PASS 1: Capability Scan & Quick Layout Parsing (< 500ms) ---
@@ -75,7 +75,11 @@ async def run_progressive_ingestion(session_id: int, file_path: str, file_id: st
                 )
             )
             
-        # Broadcast Pass 1 complete
+        # Cache Pass 1 complete status in Redis and notify
+        redis_session.set_task_status(session_id, "SECTIONS_READY", "PDF parsed. You can start reading!")
+        if task_id:
+            task_queue.update_progress(task_id, 20.0, "PDF outline parsed. Generating page embeddings...")
+
         await notify_client(session_id, {
             "type": "progress_update",
             "step": "SECTIONS_READY",
@@ -85,22 +89,18 @@ async def run_progressive_ingestion(session_id: int, file_path: str, file_id: st
         
         # --- PASS 2 & 3: Progressive Page and Embedding Processing ---
         processed_pages = set()
-        queue = page_priority_queue[session_id]
         total_pages = caps["total_pages"]
         
         # Process pages sequentially or on-demand
         for page_idx in range(1, total_pages + 1):
-            # Check if user has jumped to any page (Priority Queue)
-            priority_page = None
-            while not queue.empty():
-                try:
-                    priority_page = queue.get_nowait()
-                    if priority_page in processed_pages:
-                        priority_page = None
-                    else:
-                        break
-                except asyncio.QueueEmpty:
-                    break
+            if task_id and task_queue.is_cancelled(task_id):
+                print(f"[Worker] Task #{task_id} was cancelled by user. Halting worker execution.")
+                return
+
+            # Check if user has jumped to any page (Redis priority queue)
+            priority_page = redis_session.pop_priority_page(session_id)
+            while priority_page is not None and priority_page in processed_pages:
+                priority_page = redis_session.pop_priority_page(session_id)
             
             target_page = priority_page if priority_page is not None else page_idx
             if target_page in processed_pages:
@@ -122,7 +122,11 @@ async def run_progressive_ingestion(session_id: int, file_path: str, file_id: st
                     
             processed_pages.add(target_page)
             
-            # Stream incremental page update to client
+            # Cache incremental page parse status and notify
+            pct = 20.0 + (len(processed_pages) / max(total_pages, 1)) * 75.0
+            if task_id:
+                task_queue.update_progress(task_id, pct, f"Indexed page {target_page}/{total_pages}")
+            redis_session.set_task_status(session_id, "PAGE_PARSED", f"Page {target_page} semantic layer loaded.", page=target_page)
             await notify_client(session_id, {
                 "type": "progress_update",
                 "step": "PAGE_PARSED",
@@ -135,8 +139,11 @@ async def run_progressive_ingestion(session_id: int, file_path: str, file_id: st
             
         # Update session status to READY
         execute_query("UPDATE sessions SET status = 'READY' WHERE id = %s;", (session_id,))
-        
-        # Stream complete
+        if task_id:
+            task_queue.update_progress(task_id, 100.0, "Ingestion completed.", status="COMPLETED")
+
+        # Cache complete status and notify
+        redis_session.set_task_status(session_id, "COMPLETE", "Ingestion pipeline fully completed. Knowledge Graph built.")
         await notify_client(session_id, {
             "type": "progress_update",
             "step": "COMPLETE",
@@ -146,6 +153,9 @@ async def run_progressive_ingestion(session_id: int, file_path: str, file_id: st
     except Exception as e:
         print(f"[Worker Error] Ingestion runner failed for Session #{session_id}: {e}")
         execute_query("UPDATE sessions SET status = 'FAILED' WHERE id = %s;", (session_id,))
+        if task_id:
+            task_queue.update_progress(task_id, 0.0, f"Ingestion failed: {e}", status="FAILED", error=str(e))
+        redis_session.set_task_status(session_id, "ERROR", f"Ingestion pipeline failed: {str(e)}")
         await notify_client(session_id, {
             "type": "progress_update",
             "step": "ERROR",
