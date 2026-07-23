@@ -14,10 +14,15 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        {/* PDF.js Library CDN */}
+        {/* Official PDF.js Library CDN */}
         <script 
           src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js" 
           defer
+        />
+        {/* Official PDF.js Viewer CSS Stylesheet for Adobe Acrobat fidelity selection */}
+        <link 
+          rel="stylesheet" 
+          href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf_viewer.min.css" 
         />
         {/* Outfit Google Font for professional UI headings */}
         <link 

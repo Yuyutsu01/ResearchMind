@@ -63,7 +63,17 @@ export default function Dashboard() {
           file_id: fId,
         }),
       });
+      
+      if (!res.ok) {
+        const errDetail = await res.text();
+        throw new Error(`Failed to create session (HTTP ${res.status}): ${errDetail}`);
+      }
+
       const data = await res.json();
+      if (!data || !data.session_id) {
+        throw new Error("Invalid response received from sessions API.");
+      }
+
       setSessionId(data.session_id);
       
       // 2. Establish WebSocket Stream connection
@@ -97,6 +107,8 @@ export default function Dashboard() {
 
     } catch (err) {
       console.error("Failed to create session", err);
+      setLogs((prev) => [...prev, `[Error] ${err instanceof Error ? err.message : String(err)}`]);
+      setWsStatus("Error");
       setIsProcessing(false);
     }
   };

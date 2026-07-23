@@ -1,7 +1,12 @@
-"use client";
-
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { BookOpen, AlertCircle, FileText, ChevronRight, Bookmark, Plus } from "lucide-react";
+import { BookOpen, AlertCircle, FileText, ChevronRight, Bookmark, Plus, Bug } from "lucide-react";
+import { FloatingToolbar } from "./FloatingToolbar";
+import { spatialIndex } from "@/lib/spatial_index";
+import { DocumentObject } from "@/lib/document_model";
+import { textLayerManager } from "@/lib/TextLayerManager";
+import { pageCache } from "@/lib/PageCache";
+import { selectionEngine } from "@/lib/SelectionEngine";
+import { semanticResolver } from "@/lib/SemanticResolver";
 
 // 1. High-fidelity canvas-based scrollable PDF Page Viewer components
 interface PdfPageProps {
@@ -10,9 +15,10 @@ interface PdfPageProps {
   scale: number;
   objects: any[];
   isVisible: boolean;
+  debugMode?: boolean;
   defaultPageSize: { width: number; height: number } | null;
   registerRef: (node: HTMLDivElement | null, pageNum: number) => void;
-  onTextSelect: (text: string, e: React.MouseEvent) => void;
+  onTextSelect: (text: string, range: Range | null, matchedObj?: DocumentObject | null) => void;
   onObjectSelect: (obj: any, e: React.MouseEvent) => void;
 }
 
@@ -22,6 +28,7 @@ const PdfPage: React.FC<PdfPageProps> = ({
   scale, 
   objects, 
   isVisible, 
+  debugMode = false,
   defaultPageSize, 
   registerRef, 
   onTextSelect, 
@@ -29,12 +36,13 @@ const PdfPage: React.FC<PdfPageProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const [textItems, setTextItems] = useState<any[]>([]);
+  const textLayerRef = useRef<HTMLDivElement>(null);
   const [viewportSize, setViewportSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     if (!isVisible) return;
     let active = true;
+
     const renderPage = async () => {
       if (!(window as any).pdfjsLib) return;
       try {
@@ -43,7 +51,6 @@ const PdfPage: React.FC<PdfPageProps> = ({
         const page = await pdf.getPage(pageNumber);
         
         const viewport = page.getViewport({ scale });
-        
         if (!active) return;
         setViewportSize({ width: viewport.width, height: viewport.height });
 
@@ -64,12 +71,13 @@ const PdfPage: React.FC<PdfPageProps> = ({
           }
         }
 
-        // Get text layer details
-        const textContent = await page.getTextContent();
-        if (!active) return;
-        setTextItems(textContent.items);
+        // Render official PDF.js Native Text Layer via TextLayerManager
+        const textLayerDiv = textLayerRef.current;
+        if (textLayerDiv) {
+          await textLayerManager.renderTextLayer(pageNumber, page, viewport, scale, textLayerDiv);
+        }
       } catch (err) {
-        console.error("Error rendering PDF page", err);
+        console.error("Error rendering PDF page native text layer", err);
       }
     };
 
@@ -79,13 +87,24 @@ const PdfPage: React.FC<PdfPageProps> = ({
     };
   }, [pdfUrl, pageNumber, scale, isVisible]);
 
-  const handleMouseUp = (e: React.MouseEvent) => {
-    const selection = window.getSelection();
-    if (!selection) return;
-    const text = selection.toString().trim();
-    if (text.length > 2) {
-      onTextSelect(text, e);
-    }
+  const handleMouseUp = () => {
+    const sel = selectionEngine.getSelection();
+    if (!sel || !containerRef.current) return;
+
+    const containerRect = containerRef.current.getBoundingClientRect();
+
+    // Convert selection screen pixels to scaled page coordinates
+    const pdfBBox = {
+      x0: (sel.bounds!.left - containerRect.left) / scale,
+      y0: (sel.bounds!.top - containerRect.top) / scale,
+      x1: (sel.bounds!.right - containerRect.left) / scale,
+      y1: (sel.bounds!.bottom - containerRect.top) / scale,
+    };
+
+    // Perform sub-1ms hit-testing against RBush Spatial Index
+    const matchedObj = spatialIndex.resolveSelectionObject(pageNumber, pdfBBox, sel.text);
+    
+    onTextSelect(sel.text, sel.range, matchedObj);
   };
 
   // Render placeholder skeleton if page is unmounted / virtualized out of viewport
@@ -115,81 +134,29 @@ const PdfPage: React.FC<PdfPageProps> = ({
       }}
       data-page-number={pageNumber}
       onMouseUp={handleMouseUp}
-      className="relative mx-auto bg-slate-900 shadow-xl border border-white/5 rounded-lg overflow-hidden select-text mb-6 transition-opacity duration-300"
+      className={`relative mx-auto bg-slate-900 shadow-xl border ${
+        debugMode ? "border-amber-500/50" : "border-white/5"
+      } rounded-lg overflow-hidden select-text mb-6 transition-opacity duration-300`}
       style={{ width: `${viewportSize.width}px`, height: `${viewportSize.height}px` }}
     >
+      {/* High-fidelity clean PDF Canvas (visually identical to Adobe Reader) */}
       <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />
-      
-      {/* Semantic Object Highlight Layout Overlay */}
-      {objects.map((obj) => {
-        if (!obj.bounding_box || obj.bounding_box.length < 4) return null;
-        const [x0, y0, x1, y1] = obj.bounding_box;
-        
-        // Translate PDF page points directly to CSS pixels
-        const left = x0 * scale;
-        const top = y0 * scale;
-        const width = (x1 - x0) * scale;
-        const height = (y1 - y0) * scale;
-        
-        if (width <= 2 || height <= 2) return null;
-        
-        return (
-          <div
-            key={obj.id}
-            onClick={(e) => {
-              e.stopPropagation();
-              onObjectSelect(obj, e);
-            }}
-            className="absolute border border-dashed border-blue-500/20 hover:border-blue-400 hover:bg-blue-500/10 transition-all cursor-pointer group"
-            style={{
-              left: `${left}px`,
-              top: `${top}px`,
-              width: `${width}px`,
-              height: `${height}px`,
-              zIndex: 20
-            }}
-            title={`Analyze ${obj.type}`}
-          >
-            <span className="hidden group-hover:block absolute -top-4 left-0 bg-blue-600 text-[8px] font-bold text-white uppercase px-1 rounded select-none z-30 pointer-events-none">
-              {obj.type}
-            </span>
-          </div>
-        );
-      })}
 
-      {/* Interactive selection transparent text layer overlay */}
+      {/* Official PDF.js Native Text Layer Container */}
       <div 
-        className="absolute inset-0 z-10 select-text overflow-hidden" 
+        ref={textLayerRef}
+        className={`textLayer absolute inset-0 z-10 select-text overflow-hidden ${
+          debugMode ? "bg-amber-500/5 border border-dashed border-amber-500/30" : ""
+        }`} 
         style={{ width: `${viewportSize.width}px`, height: `${viewportSize.height}px` }}
-      >
-        {textItems.map((item, idx) => {
-          if (!viewportSize.width || !(window as any).pdfjsLib) return null;
-          
-          const viewport = {
-            transform: [scale, 0, 0, -scale, 0, viewportSize.height]
-          };
-          const tx = (window as any).pdfjsLib.Util.transform(viewport.transform, item.transform);
-          
-          const style = {
-            left: `${tx[4]}px`,
-            top: `${tx[5] - tx[3]}px`,
-            fontSize: `${tx[3]}px`,
-            fontFamily: item.fontName,
-            position: "absolute" as const,
-            color: "transparent",
-            whiteSpace: "pre" as const,
-            transformOrigin: "left bottom",
-            transform: `scaleX(${item.width / (tx[0] * (item.str.length || 1))})`,
-            cursor: "text",
-            lineHeight: 1
-          };
-          return (
-            <span key={idx} style={style}>
-              {item.str}
-            </span>
-          );
-        })}
-      </div>
+      />
+
+      {/* Developer Debug Overlay (Feature Flag DEBUG_TEXT_LAYER) */}
+      {debugMode && (
+        <div className="absolute top-2 left-2 z-30 bg-amber-500 text-black font-mono font-bold text-[9px] px-1.5 py-0.5 rounded shadow pointer-events-none select-none">
+          DEBUG PAGE {pageNumber} | objects: {objects.length}
+        </div>
+      )}
     </div>
   );
 };
@@ -198,8 +165,9 @@ interface PdfViewerProps {
   pdfUrl: string;
   scale: number;
   objects: Record<number, any[]>;
+  debugMode?: boolean;
   onPageChange: (pageNum: number) => void;
-  onTextSelect: (text: string, e: React.MouseEvent) => void;
+  onTextSelect: (text: string, range: Range | null, matchedObj?: DocumentObject | null) => void;
   onObjectSelect: (obj: any, e: React.MouseEvent) => void;
 }
 
@@ -207,11 +175,13 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
   pdfUrl, 
   scale, 
   objects, 
+  debugMode = false,
   onPageChange,
   onTextSelect, 
   onObjectSelect 
 }) => {
   const [numPages, setNumPages] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [pageSize, setPageSize] = useState<{ width: number; height: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -244,7 +214,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
     loadPdf();
   }, [pdfUrl]);
 
-  // Set up intersection observer for virtualization
+  // Set up intersection observer for virtualization with pageCache buffer
   useEffect(() => {
     observerRef.current = new IntersectionObserver(
       (entries) => {
@@ -255,7 +225,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
             if (pageNum > 0) {
               next[pageNum] = entry.isIntersecting;
               if (entry.isIntersecting) {
-                // Notify parent workspace about visible page
+                setCurrentPage(pageNum);
                 onPageChange(pageNum);
               }
             }
@@ -265,7 +235,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       },
       {
         root: containerRef.current,
-        rootMargin: "450px 0px",
+        rootMargin: "650px 0px", // Larger buffer for selection survival
         threshold: 0.01
       }
     );
@@ -288,11 +258,8 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
       {numPages > 0 ? (
         Array.from({ length: numPages }, (_, i) => {
           const pageNum = i + 1;
-          const isPageVisible = !!(
-            visiblePages[pageNum] || 
-            visiblePages[pageNum - 1] || 
-            visiblePages[pageNum + 1]
-          );
+          // Phase 5: Virtual page cache keeps active page ± 2 surrounding pages mounted
+          const isPageVisible = pageCache.isPageMounted(pageNum, currentPage, numPages) || !!visiblePages[pageNum];
 
           return (
             <PdfPage 
@@ -302,6 +269,7 @@ const PdfViewer: React.FC<PdfViewerProps> = ({
               scale={scale}
               objects={objects[pageNum] || []}
               isVisible={isPageVisible}
+              debugMode={debugMode}
               defaultPageSize={pageSize}
               registerRef={registerPageRef}
               onTextSelect={onTextSelect} 
@@ -334,6 +302,9 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
   const [paperObjects, setPaperObjects] = useState<any[]>([]);
   const [parsingStatus, setParsingStatus] = useState<{ step: string; msg: string; page?: number } | null>(null);
   
+  // Developer Debug Mode state (DEBUG_TEXT_LAYER)
+  const [debugMode, setDebugMode] = useState<boolean>(false);
+
   // Swarm explanation states
   const [activeTab, setActiveTab] = useState<"explain" | "notebook" | "timeline">("explain");
   const [swarmSubTab, setSwarmSubTab] = useState<"explain" | "math" | "background" | "visual" | "questions">("explain");
@@ -345,6 +316,11 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
   const [userNoteText, setUserNoteText] = useState("");
   const [savedNoteSuccess, setSavedNoteSuccess] = useState(false);
   const [timeline, setTimeline] = useState<any[]>([]);
+
+  // Selection & spatial document state
+  const [selectedDocumentObject, setSelectedDocumentObject] = useState<DocumentObject | null>(null);
+  const [selectedRange, setSelectedRange] = useState<Range | null>(null);
+  const [targetRect, setTargetRect] = useState<DOMRect | null>(null);
 
   // Fetch paper metadata & objects
   const fetchPaperDetails = useCallback(async () => {
@@ -365,6 +341,8 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
       const data = await res.json();
       if (data.success) {
         setPaperObjects(data.objects || []);
+        // Load into spatial index for sub-1ms hit detection
+        spatialIndex.loadObjects(data.objects || []);
       }
     } catch (err) {
       console.error(err);
@@ -437,29 +415,47 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
     return () => ws.removeEventListener("message", handleWsMessage);
   }, [ws, fetchPaperDetails, fetchPaperObjects, fetchTimeline]);
 
-  // Submit selections to swarm orchestrator
-  const triggerSwarmExplanation = (type: string) => {
+  // Submit selections to swarm orchestrator with enriched document object metadata
+  const triggerSwarmExplanation = (type: string, customPrompt?: string) => {
     if (!ws || !selectedText) return;
     setShowHighlightMenu(false);
+
+    if (type === "Notebook") {
+      saveNoteToNotebook();
+      return;
+    }
+
     setExplainingState(true);
     setActiveTab("explain");
     
     // Auto route swarm subtab focus
     const lowerType = type.toLowerCase();
-    if (lowerType === "equation") setSwarmSubTab("math");
-    else if (lowerType === "citation") setSwarmSubTab("explain");
+    if (lowerType === "equation" || lowerType === "math") setSwarmSubTab("math");
+    else if (lowerType === "visual") setSwarmSubTab("visual");
     else setSwarmSubTab("explain");
 
-    ws.send(JSON.stringify({
+    // Phase 8: Resolve structured semantic payload
+    const dummyBBox = { x0: 0, y0: 0, x1: 0, y1: 0 };
+    const semanticContext = semanticResolver.resolveContext(
+      selectedDocumentObject?.page || 1,
+      dummyBBox,
+      selectedText,
+      selectedDocumentObject
+    );
+
+    const payload: any = {
       type: "selection",
       text: selectedText,
       selection_type: type,
-      id: selectedObjectId
-    }));
+      id: selectedObjectId || selectedDocumentObject?.id || null,
+      custom_prompt: customPrompt || null,
+      document_object: semanticContext
+    };
+
+    ws.send(JSON.stringify(payload));
   };
 
   const saveNoteToNotebook = async () => {
-    if (!currentExplanation) return;
     try {
       const res = await fetch(`${apiBase}/api/v1/sessions/${sessionId}/notebook`, {
         method: "POST",
@@ -467,8 +463,8 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
         body: JSON.stringify({
           selection_text: selectedText,
           selection_type: "HIGHLIGHT",
-          ai_explanations: currentExplanation,
-          user_note: userNoteText
+          ai_explanations: currentExplanation || { summary: "User Highlighted Note" },
+          user_note: userNoteText || selectedText
         })
       });
       const data = await res.json();
@@ -516,25 +512,47 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
               </div>
             )}
           </div>
-          {/* Zoom Controls */}
-          <div className="flex items-center gap-1.5 bg-[#121212] border border-white/10 rounded px-1.5 py-0.5">
+          
+          {/* Zoom & Developer Debug Controls */}
+          <div className="flex items-center gap-2">
             <button
-              onClick={() => setZoom((z) => Math.max(z - 0.15, 0.75))}
-              className="text-[10px] font-bold px-2 py-0.5 hover:bg-white/10 rounded text-slate-300 transition-colors"
-              title="Zoom Out"
+              onClick={() => setDebugMode(!debugMode)}
+              className={`flex items-center gap-1 text-[9px] font-mono font-bold px-2 py-1 rounded border transition-all ${
+                debugMode
+                  ? "bg-amber-500 text-black border-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.5)]"
+                  : "bg-white/5 text-slate-400 hover:text-white border-white/10"
+              }`}
+              title="Toggle Developer Debug Overlay (DEBUG_TEXT_LAYER)"
             >
-              -
+              <Bug className="w-3 h-3" />
+              <span>{debugMode ? "DEBUG ON" : "DEBUG"}</span>
             </button>
-            <span className="text-[9px] font-mono text-slate-400 px-1 font-bold">
-              {Math.round(zoom * 100)}%
-            </span>
-            <button
-              onClick={() => setZoom((z) => Math.min(z + 0.15, 2.5))}
-              className="text-[10px] font-bold px-2 py-0.5 hover:bg-white/10 rounded text-slate-300 transition-colors"
-              title="Zoom In"
-            >
-              +
-            </button>
+
+            <div className="flex items-center gap-1.5 bg-[#121212] border border-white/10 rounded px-1.5 py-0.5">
+              <button
+                onClick={() => {
+                  setZoom((z) => Math.max(z - 0.15, 0.75));
+                  textLayerManager.invalidateCache();
+                }}
+                className="text-[10px] font-bold px-2 py-0.5 hover:bg-white/10 rounded text-slate-300 transition-colors"
+                title="Zoom Out"
+              >
+                -
+              </button>
+              <span className="text-[9px] font-mono text-slate-400 px-1 font-bold">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button
+                onClick={() => {
+                  setZoom((z) => Math.min(z + 0.15, 2.5));
+                  textLayerManager.invalidateCache();
+                }}
+                className="text-[10px] font-bold px-2 py-0.5 hover:bg-white/10 rounded text-slate-300 transition-colors"
+                title="Zoom In"
+              >
+                +
+              </button>
+            </div>
           </div>
         </div>
 
@@ -545,17 +563,22 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
               pdfUrl={`${apiBase}/uploads/${fileId}`}
               scale={zoom}
               objects={groupedObjects}
+              debugMode={debugMode}
               onPageChange={handlePageChange}
-              onTextSelect={(text, e) => {
+              onTextSelect={(text, range, matchedObj) => {
                 setSelectedText(text);
-                setSelectedObjectId(null);
-                setMenuPosition({ x: e.clientX, y: e.clientY - 40 });
+                setSelectedRange(range);
+                setTargetRect(range ? range.getBoundingClientRect() : null);
+                setSelectedDocumentObject(matchedObj || null);
+                setSelectedObjectId(matchedObj ? matchedObj.id : null);
                 setShowHighlightMenu(true);
               }}
               onObjectSelect={(obj, e) => {
                 setSelectedText(obj.text_content || `Selected ${obj.type}`);
+                setSelectedRange(null);
+                setTargetRect(e.currentTarget.getBoundingClientRect());
+                setSelectedDocumentObject(obj);
                 setSelectedObjectId(obj.id);
-                setMenuPosition({ x: e.clientX, y: e.clientY - 40 });
                 setShowHighlightMenu(true);
               }}
             />
@@ -568,22 +591,16 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
         </div>
       </div>
 
-      {/* Floating Selection Toolbar */}
+      {/* Floating AI Toolbar with Floating UI Positioning (< 16ms appearance) */}
       {showHighlightMenu && (
-        <div 
-          style={{ top: menuPosition.y, left: menuPosition.x }}
-          className="fixed bg-gray-900/95 border border-blue-500/30 shadow-[0_0_15px_rgba(59,130,246,0.3)] rounded-lg p-2 flex gap-1.5 z-50 animate-in fade-in zoom-in-95 duration-100"
-        >
-          {["Explain", "Math", "Background", "Visual", "Citation"].map((type) => (
-            <button
-              key={type}
-              onClick={() => triggerSwarmExplanation(type)}
-              className="text-[9px] uppercase font-bold px-2 py-1 bg-white/5 hover:bg-blue-600 text-slate-200 hover:text-white rounded transition-colors"
-            >
-              {type}
-            </button>
-          ))}
-        </div>
+        <FloatingToolbar
+          range={selectedRange}
+          targetRect={targetRect}
+          selectedText={selectedText}
+          selectedType={selectedDocumentObject?.type}
+          onAction={(type, customPrompt) => triggerSwarmExplanation(type, customPrompt)}
+          onClose={() => setShowHighlightMenu(false)}
+        />
       )}
 
       {/* 2. Right Panel: Swarm Sidebar Tools (30% width lock) */}
