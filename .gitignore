@@ -24,6 +24,7 @@ backend/src/venv/
 .env
 .env.*
 .env.local
+.agents/
 
 # ==========================================
 # Node.js & Javascript Build Tools
