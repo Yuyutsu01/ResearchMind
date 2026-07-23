@@ -1,5 +1,11 @@
 import os
 import psycopg2
+from dotenv import load_dotenv
+
+# Load environment variables from workspace root .env file
+load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "../../../../.env"))
+load_dotenv()
+
 from psycopg2.extras import RealDictCursor
 from contextlib import contextmanager
 
@@ -37,6 +43,12 @@ def init_db():
                 file_id VARCHAR(255),
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
+            """,
+            """
+            ALTER TABLE sessions ADD COLUMN IF NOT EXISTS file_id VARCHAR(255);
+            """,
+            """
+            ALTER TABLE sessions ADD COLUMN IF NOT EXISTS status VARCHAR(50) DEFAULT 'IDLE';
             """,
             """
             CREATE TABLE IF NOT EXISTS paper_objects (
@@ -79,6 +91,29 @@ def init_db():
                 action_type VARCHAR(50) NOT NULL,
                 details JSONB NOT NULL,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS workflow_runs (
+                run_id UUID PRIMARY KEY,
+                session_id INTEGER REFERENCES sessions(id) ON DELETE CASCADE,
+                selection_text TEXT NOT NULL,
+                selection_type VARCHAR(50) NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            );
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS task_checkpoints (
+                task_id UUID PRIMARY KEY,
+                run_id UUID REFERENCES workflow_runs(run_id) ON DELETE CASCADE,
+                agent_name VARCHAR(50) NOT NULL,
+                status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
+                result JSONB,
+                retries INTEGER DEFAULT 0,
+                created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
             );
             """
         ]

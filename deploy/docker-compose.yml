@@ -1,3 +1,5 @@
+version: '3.8'
+
 services:
   postgres:
     image: postgres:15-alpine
@@ -11,7 +13,7 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d researchmind"]
       interval: 5s
       timeout: 5s
       retries: 5
@@ -37,6 +39,11 @@ services:
       - "6334:6334"
     volumes:
       - qdrant_data:/qdrant/storage
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:6333/v1/readyz || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -47,9 +54,11 @@ services:
       - "8001:8000"
     environment:
       - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/researchmind
-      - REDIS_URL=redis://redis:6379/0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - QDRANT_HOST=qdrant
       - QDRANT_PORT=6333
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
       - LLM_BASE_URL=${LLM_BASE_URL}
       - LLM_API_KEY=${LLM_API_KEY}
       - LLM_MODEL=${LLM_MODEL}
@@ -59,7 +68,7 @@ services:
       redis:
         condition: service_healthy
       qdrant:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - ../backend/uploads:/app/uploads
       - ../backend/reports:/app/reports
@@ -68,13 +77,37 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8001
     container_name: researchmind_frontend
     ports:
       - "3001:3000"
     environment:
       - NEXT_PUBLIC_API_URL=http://localhost:8001
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: researchmind_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      backend:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: researchmind_grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    depends_on:
+      - prometheus
 
 volumes:
   postgres_data:
