@@ -1,10 +1,10 @@
-/**
- * Response Composer Engine for ResearchMind
- * 
- * Merges, ranks, deduplicates, and structures outputs from parallel Swarm Agents
- * into markdown-ready response layouts for Explain, Math, Background, Visual, and Citation tabs.
- * Supports multi-audience Reading-Level adaptation (Beginner, Undergraduate, Researcher).
- */
+"""
+Response Composer Engine for ResearchMind
+
+Merges, ranks, deduplicates, and structures outputs from parallel Swarm Agents
+into markdown-ready response layouts for Explain, Math, Background, Visual, and Citation tabs.
+Supports multi-audience Reading-Level adaptation (Beginner, Undergraduate, Researcher).
+"""
 
 import json
 from typing import Dict, Any, List
