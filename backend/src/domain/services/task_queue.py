@@ -15,12 +15,13 @@ class AsyncTaskQueue:
     def __init__(self):
         self.redis = redis_cache.client
         self.ttl = 86400  # 24 hours TTL for task records
+        self._local_tasks: Dict[str, Dict[str, Any]] = {}
 
     def _get_key(self, task_id: str) -> str:
         return f"task:{task_id}"
 
     def create_task(self, session_id: int, task_name: str, payload: Dict[str, Any], max_retries: int = 3) -> str:
-        """Initializes a new task record in Redis."""
+        """Initializes a new task record in Redis or local memory fallback."""
         task_id = str(uuid.uuid4())
         task_data = {
             "task_id": task_id,
@@ -36,6 +37,7 @@ class AsyncTaskQueue:
             "created_at": time.time(),
             "updated_at": time.time()
         }
+        self._local_tasks[task_id] = task_data
         if self.redis:
             try:
                 self.redis.setex(self._get_key(task_id), self.ttl, json.dumps(task_data))
@@ -44,14 +46,15 @@ class AsyncTaskQueue:
         return task_id
 
     def get_task(self, task_id: str) -> Optional[Dict[str, Any]]:
-        """Retrieves task state from Redis."""
-        if not self.redis:
-            return None
-        try:
-            val = self.redis.get(self._get_key(task_id))
-            return json.loads(val) if val else None
-        except Exception:
-            return None
+        """Retrieves task state from Redis or local memory fallback."""
+        if self.redis:
+            try:
+                val = self.redis.get(self._get_key(task_id))
+                if val:
+                    return json.loads(val)
+            except Exception:
+                pass
+        return self._local_tasks.get(task_id)
 
     def update_progress(self, task_id: str, progress: float, msg: str = "", status: str = "RUNNING", error: Optional[str] = None):
         """Updates task progress percentage and status message."""
@@ -64,6 +67,7 @@ class AsyncTaskQueue:
         if error:
             task["error"] = error
         task["updated_at"] = time.time()
+        self._local_tasks[task_id] = task
 
         if self.redis:
             try:
@@ -79,12 +83,12 @@ class AsyncTaskQueue:
         task["status"] = "CANCELLED"
         task["msg"] = "Task cancelled by user."
         task["updated_at"] = time.time()
+        self._local_tasks[task_id] = task
         if self.redis:
             try:
                 self.redis.setex(self._get_key(task_id), self.ttl, json.dumps(task))
-                return True
             except Exception:
-                return False
+                pass
         return True
 
     def is_cancelled(self, task_id: str) -> bool:
