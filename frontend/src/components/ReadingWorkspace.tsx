@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { BookOpen, AlertCircle, FileText, ChevronRight, Bookmark, Plus, Bug } from "lucide-react";
 import { FloatingToolbar } from "./FloatingToolbar";
+import { SwarmAnalystPanel } from "./SwarmAnalystPanel";
 import { spatialIndex } from "@/lib/spatial_index";
 import { DocumentObject } from "@/lib/document_model";
 import { textLayerManager } from "@/lib/TextLayerManager";
@@ -305,9 +306,10 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
   // Developer Debug Mode state (DEBUG_TEXT_LAYER)
   const [debugMode, setDebugMode] = useState<boolean>(false);
 
-  // Swarm explanation states
+  // Swarm explanation & Reading Level states
   const [activeTab, setActiveTab] = useState<"explain" | "notebook" | "timeline">("explain");
   const [swarmSubTab, setSwarmSubTab] = useState<"explain" | "math" | "background" | "visual" | "questions">("explain");
+  const [readingLevel, setReadingLevel] = useState<"Beginner" | "Undergraduate" | "Researcher">("Beginner");
   const [currentExplanation, setCurrentExplanation] = useState<any>(null);
   const [explainingState, setExplainingState] = useState(false);
 
@@ -416,7 +418,7 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
   }, [ws, fetchPaperDetails, fetchPaperObjects, fetchTimeline]);
 
   // Submit selections to swarm orchestrator with enriched document object metadata
-  const triggerSwarmExplanation = (type: string, customPrompt?: string) => {
+  const triggerSwarmExplanation = (type: string, customPrompt?: string, targetLevel?: "Beginner" | "Undergraduate" | "Researcher") => {
     if (!ws || !selectedText) return;
     setShowHighlightMenu(false);
 
@@ -449,6 +451,7 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
       selection_type: type,
       id: selectedObjectId || selectedDocumentObject?.id || null,
       custom_prompt: customPrompt || null,
+      reading_level: targetLevel || readingLevel,
       document_object: semanticContext
     };
 
@@ -629,165 +632,18 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
           
           {/* TAB 1: Swarm Analyst */}
           <div className={`absolute inset-0 flex flex-col ${activeTab === "explain" ? "block" : "hidden"}`}>
-            {/* Agent Sub-Tabs */}
-            <div className="flex-shrink-0 flex border-b border-white/5 bg-[#121212] px-2 py-1 gap-1 select-none">
-              {(["explain", "math", "background", "visual", "questions"] as const).map((sub) => (
-                <button
-                  key={sub}
-                  onClick={() => setSwarmSubTab(sub)}
-                  className={`px-2 py-1 text-[8px] font-bold uppercase tracking-wider rounded transition-all ${
-                    swarmSubTab === sub 
-                      ? "bg-blue-600 text-white" 
-                      : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-                  }`}
-                >
-                  {sub}
-                </button>
-              ))}
-            </div>
-
-            {/* Explanation scroll content */}
-            <div className="flex-1 overflow-y-auto p-5 scrollable">
-              {explainingState ? (
-                <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500 gap-3">
-                  <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin" />
-                  <p className="text-[10px] uppercase font-bold animate-pulse text-blue-400">Swarm agents collaborating...</p>
-                </div>
-              ) : currentExplanation ? (
-                <div className="flex flex-col gap-6 text-slate-300">
-                  
-                  {/* Selected Highlight Context */}
-                  <div className="bg-[#121212] border border-white/5 p-3 rounded text-xs italic border-l-2 border-l-blue-500">
-                    "{selectedText}"
-                  </div>
-
-                  {/* SUB-TABS RENDER */}
-                  {swarmSubTab === "explain" && (
-                    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <div>
-                        <h5 className="text-[9px] uppercase font-bold text-blue-400 mb-1">Simple Intuition</h5>
-                        <p className="text-xs leading-relaxed">{currentExplanation.explanation?.explanation?.level_1 || currentExplanation.level_1 || "Select a part of the paper to generate simple explanations."}</p>
-                      </div>
-                      <div>
-                        <h5 className="text-[9px] uppercase font-bold text-blue-400 mb-1">Detailed Mechanics</h5>
-                        <p className="text-xs leading-relaxed">{currentExplanation.explanation?.explanation?.level_2 || currentExplanation.level_2}</p>
-                      </div>
-                      <div>
-                        <h5 className="text-[9px] uppercase font-bold text-blue-400 mb-1">Author Choice Intent</h5>
-                        <p className="text-xs leading-relaxed">{currentExplanation.explanation?.explanation?.why_this_matters?.author_intent || currentExplanation.why_this_matters?.author_intent}</p>
-                      </div>
-                    </div>
-                  )}
-
-                  {swarmSubTab === "math" && (
-                    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <h5 className="text-[9px] uppercase font-bold text-purple-400 mb-1">Equation Derivations</h5>
-                      <div className="latex-math text-center py-4 my-2 text-white">
-                        {currentExplanation.math?.latex_clean || currentExplanation.explanation?.explanation?.level_4 || currentExplanation.level_4 || "N/A"}
-                      </div>
-                      <div>
-                        <h5 className="text-[9px] uppercase font-bold text-purple-400 mb-1">Variables Definition</h5>
-                        {currentExplanation.math?.variable_definitions ? (
-                          <div className="grid grid-cols-4 gap-2 text-xs">
-                            {Object.entries(currentExplanation.math.variable_definitions).map(([k, v]: any) => (
-                              <React.Fragment key={k}>
-                                <span className="font-mono font-bold text-white">{k}</span>
-                                <span className="col-span-3 text-slate-400">{v}</span>
-                              </React.Fragment>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-xs text-slate-500">No math variables mapped for this object.</p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {swarmSubTab === "background" && (
-                    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <h5 className="text-[9px] uppercase font-bold text-amber-400 mb-1">Prerequisite Concepts</h5>
-                      {currentExplanation.background?.prerequisites ? (
-                        <div className="flex flex-col gap-3">
-                          {currentExplanation.background.prerequisites.map((p: string, i: number) => (
-                            <div key={i} className="bg-white/5 border border-white/5 p-3 rounded">
-                              <span className="text-xs font-bold text-white block mb-1">{p}</span>
-                              <p className="text-xs text-slate-400">{currentExplanation.background.brief_explanations?.[p] || "Core background knowledge."}</p>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-500">No prerequisites mapped for this object.</p>
-                      )}
-                    </div>
-                  )}
-
-                  {swarmSubTab === "visual" && (
-                    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <h5 className="text-[9px] uppercase font-bold text-green-400 mb-1">Flowcharts & Architectures</h5>
-                      <pre className="bg-[#121212] border border-white/5 p-3 rounded text-[10px] font-mono text-green-400 overflow-x-auto leading-tight">
-                        {currentExplanation.visual?.diagram || "+-----------------+\n| Selected Node   |\n+-----------------+"}
-                      </pre>
-                      <p className="text-xs text-slate-400">{currentExplanation.visual?.explanation}</p>
-                    </div>
-                  )}
-
-                  {swarmSubTab === "questions" && (
-                    <div className="flex flex-col gap-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
-                      <h5 className="text-[9px] uppercase font-bold text-blue-400 mb-1">Predicted Follow-up Questions</h5>
-                      {currentExplanation.questions?.questions ? (
-                        <div className="flex flex-col gap-2">
-                          {currentExplanation.questions.questions.map((q: string, idx: number) => (
-                            <button
-                              key={idx}
-                              onClick={() => {
-                                setSelectedText(q);
-                                setSelectedObjectId(null);
-                                triggerSwarmExplanation("TEXT");
-                              }}
-                              className="text-left text-xs bg-white/5 border border-white/5 p-2 rounded hover:bg-blue-600 hover:text-white transition-colors"
-                            >
-                              {q}
-                            </button>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-xs text-slate-500">No predictions generated.</p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Save Note to Research Notebook Widget */}
-                  <div className="mt-8 border-t border-white/5 pt-6">
-                    <h5 className="text-[9px] uppercase font-bold text-slate-400 mb-2">Save to Research Notebook</h5>
-                    <div className="flex gap-2">
-                      <input 
-                        type="text" 
-                        placeholder="Add personal note annotations..."
-                        value={userNoteText}
-                        onChange={(e) => setUserNoteText(e.target.value)}
-                        className="flex-1 bg-[#121212] border border-white/10 rounded px-3 py-1.5 text-xs text-white focus:outline-none focus:border-blue-500"
-                      />
-                      <button 
-                        onClick={saveNoteToNotebook}
-                        className="bg-blue-600 hover:bg-blue-700 text-white rounded p-1.5 transition-colors"
-                        title="Save annotation"
-                      >
-                        <Plus className="w-4 h-4" />
-                      </button>
-                    </div>
-                    {savedNoteSuccess && (
-                      <p className="text-[10px] text-green-400 font-bold uppercase mt-2">Note saved successfully!</p>
-                    )}
-                  </div>
-
-                </div>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full py-20 text-slate-500 gap-2">
-                  <AlertCircle className="w-8 h-8 stroke-[1.5]" />
-                  <p className="text-xs">Click any equation, figure, table, citation, or drag to highlight paragraphs.</p>
-                </div>
-              )}
-            </div>
+            <SwarmAnalystPanel
+              markdownContent={currentExplanation?.composer?.composed_markdown || ""}
+              selectedText={selectedText}
+              readingLevel={readingLevel}
+              onLevelChange={(newLevel) => {
+                setReadingLevel(newLevel);
+                if (selectedText) {
+                  triggerSwarmExplanation(selectedDocumentObject?.type || "TEXT", undefined, newLevel);
+                }
+              }}
+              isLoading={explainingState}
+            />
           </div>
 
           {/* TAB 2: Research Notebook */}

@@ -14,6 +14,7 @@ from src.domain.swarm.agents import (
     terminology_agent,
     question_agent
 )
+from src.domain.swarm.response_composer import response_composer
 
 class SwarmOrchestrator:
     """
@@ -111,14 +112,16 @@ class SwarmOrchestrator:
         session_id: int, 
         selection_text: str, 
         selection_type: str, 
-        obj_id: str = None
+        obj_id: str = None,
+        reading_level: str = "Beginner"
     ) -> Dict[str, Any]:
         """
         Main entry point for interactive text selection.
-        Orchestrates specialized sub-agents in parallel with persistent checkpoints.
+        Orchestrates specialized sub-agents in parallel with persistent checkpoints
+        and passes output through ResponseComposer.
         """
         run_id = str(uuid.uuid4())
-        print(f"[Orchestrator] Starting Persistent Run #{run_id} | Selected item: '{selection_text}' (Type: {selection_type})")
+        print(f"[Orchestrator] Starting Persistent Run #{run_id} | Selected item: '{selection_text}' (Type: {selection_type}, Level: {reading_level})")
         
         self._create_run(run_id, session_id, selection_text, selection_type)
         self._update_run_status(run_id, "RUNNING")
@@ -127,7 +130,7 @@ class SwarmOrchestrator:
         
         # Mapping definition for selective parallel routing
         routing_targets = []
-        if s_type == "equation":
+        if s_type in ["equation", "math"]:
             routing_targets = [
                 ("math", math_agent.analyze_equation, (session_id, obj_id or "eq", selection_text)),
                 ("background", background_agent.get_prerequisites, (session_id, obj_id or "eq", selection_text)),
@@ -153,7 +156,7 @@ class SwarmOrchestrator:
             ]
         else:
             routing_targets = [
-                ("explanation", explanation_agent.explain, (session_id, obj_id or "para", selection_text, "Beginner")),
+                ("explanation", explanation_agent.explain, (session_id, obj_id or "para", selection_text, reading_level)),
                 ("background", background_agent.get_prerequisites, (session_id, obj_id or "para", selection_text)),
                 ("visual", visual_agent.generate_diagram, (session_id, obj_id or "para", selection_text)),
                 ("terminology", terminology_agent.define_term, (session_id, obj_id or "para", selection_text)),
@@ -196,6 +199,10 @@ class SwarmOrchestrator:
             self._update_run_status(run_id, "FAILED")
         else:
             self._update_run_status(run_id, "COMPLETED")
+
+        # Pass multi-agent output through Response Composer for structured Markdown layout
+        composed_output = response_composer.compose(selection_type, selection_text, merged_res, reading_level)
+        merged_res["composer"] = composed_output
 
         # Format timeline logging in Postgres on success
         try:

@@ -52,6 +52,7 @@ async def websocket_research(websocket: WebSocket, session_id: int):
                 obj_id = msg.get("id")
                 custom_prompt = msg.get("custom_prompt")
                 doc_obj = msg.get("document_object")
+                reading_level = msg.get("reading_level", "Beginner")
                 
                 obj_metadata = doc_obj or {}
                 # If selection comes from a pre-parsed object ID, resolve coordinates/context from DB if not already provided
@@ -81,9 +82,11 @@ async def websocket_research(websocket: WebSocket, session_id: int):
                             "relationships": rels
                         }
                 
-                # Execute swarm orchestration analysis with custom prompt / doc object
+                # Execute swarm orchestration analysis with custom prompt / doc object / reading level
                 prompt_text = f"{custom_prompt}\n\nSelected Content:\n{sel_text}" if custom_prompt else sel_text
-                explanation = await swarm_orchestrator.process_selection(session_id, prompt_text, sel_type, obj_id)
+                explanation = await swarm_orchestrator.process_selection(
+                    session_id, prompt_text, sel_type, obj_id, reading_level=reading_level
+                )
                 
                 # Append interaction and result summary to persistent Redis history
                 summary = explanation.get("explanation", {}).get("level_1") or f"Analyzed {sel_type}"
