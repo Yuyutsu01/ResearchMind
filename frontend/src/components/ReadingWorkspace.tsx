@@ -643,6 +643,7 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
                 }
               }}
               isLoading={explainingState}
+              telemetry={currentExplanation?.telemetry}
             />
           </div>
 

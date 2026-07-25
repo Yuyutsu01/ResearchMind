@@ -11,6 +11,15 @@ interface SwarmAnalystPanelProps {
   readingLevel: "Beginner" | "Undergraduate" | "Researcher";
   onLevelChange: (level: "Beginner" | "Undergraduate" | "Researcher") => void;
   isLoading: boolean;
+  telemetry?: {
+    cache?: string;
+    redis_lookup_ms?: number;
+    intent_router_ms?: number;
+    context_builder_ms?: number;
+    execution_ms?: number;
+    ttft_ms?: number;
+    total_ms?: number;
+  };
 }
 
 export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
@@ -19,6 +28,7 @@ export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
   readingLevel,
   onLevelChange,
   isLoading,
+  telemetry,
 }) => {
   const [copied, setCopied] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
@@ -81,16 +91,33 @@ export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
             <Sparkles className="w-4 h-4" />
             <span>Swarm Analyst Intelligence</span>
           </div>
-          {markdownContent && (
-            <button
-              onClick={handleCopy}
-              className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-all"
-              title="Copy markdown response"
-            >
-              {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-              <span>{copied ? "Copied" : "Copy"}</span>
-            </button>
-          )}
+
+          <div className="flex items-center gap-2">
+            {/* Developer Telemetry Timing Badge */}
+            {telemetry && (
+              <span
+                className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${
+                  telemetry.cache === "HIT"
+                    ? "bg-green-500/20 text-green-400 border-green-500/30"
+                    : "bg-blue-500/20 text-blue-400 border-blue-500/30"
+                }`}
+                title={`Redis: ${telemetry.redis_lookup_ms}ms | Intent: ${telemetry.intent_router_ms}ms | Context: ${telemetry.context_builder_ms}ms | TTFT: ${telemetry.ttft_ms}ms`}
+              >
+                ⚡ {telemetry.cache === "HIT" ? `CACHE HIT (${telemetry.total_ms}ms)` : `TTFT: ${telemetry.ttft_ms}ms | ${telemetry.total_ms}ms`}
+              </span>
+            )}
+
+            {markdownContent && (
+              <button
+                onClick={handleCopy}
+                className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-all"
+                title="Copy markdown response"
+              >
+                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
+                <span>{copied ? "Copied" : "Copy"}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Reading Level Selector Buttons */}
@@ -133,7 +160,7 @@ export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
         </div>
       </div>
 
-      {/* 2. Scrollable Body: Selected Highlight & Collapsible Sections */}
+      {/* 2. Scrollable Body: Selected Highlight, Progressive Timeline & Collapsible Sections */}
       <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollable">
         {selectedText && (
           <div className="bg-[#121212] border-l-2 border-l-blue-500 border-white/5 border p-3 rounded text-xs italic text-slate-300">
@@ -142,11 +169,12 @@ export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
         )}
 
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-3">
+          <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-4">
             <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin" />
-            <p className="text-[10px] uppercase font-bold animate-pulse text-blue-400">
-              Response Composer structuring analysis...
-            </p>
+            <div className="flex flex-col gap-1.5 text-center text-[10px] font-mono text-slate-400">
+              <span className="text-green-400 font-bold">✓ Single-Pass SharedContext Built</span>
+              <span className="text-blue-400 font-bold animate-pulse">⚡ Parallel Execution & Section Streaming...</span>
+            </div>
           </div>
         ) : sections.length > 0 ? (
           <div className="flex flex-col gap-3">
