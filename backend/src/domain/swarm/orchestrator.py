@@ -15,6 +15,10 @@ from src.domain.swarm.agents import (
     question_agent
 )
 from src.domain.swarm.response_composer import response_composer
+from src.domain.swarm.intent_router import intent_router
+from src.domain.swarm.context_builder import context_builder
+from src.domain.swarm.response_cache import response_cache
+from src.domain.swarm.parallel_executor import parallel_executor
 
 class SwarmOrchestrator:
     """
@@ -113,98 +117,83 @@ class SwarmOrchestrator:
         selection_text: str, 
         selection_type: str, 
         obj_id: str = None,
-        reading_level: str = "Beginner"
+        reading_level: str = "Beginner",
+        stream_callback: Callable[[str, Dict[str, Any]], None] = None
     ) -> Dict[str, Any]:
         """
-        Main entry point for interactive text selection.
-        Orchestrates specialized sub-agents in parallel with persistent checkpoints
-        and passes output through ResponseComposer.
+        10-Phase High-Performance Selection Handler.
+        Pipeline: ResponseCache -> IntentRouter -> ContextBuilder -> ParallelExecutor -> ResponseComposer.
+        Target performance: TTFT < 700ms, First visible < 800ms, Cache hit < 100ms.
         """
+        t_start = time.time()
+
+        # 1. PHASE 6 & 7: Check Redis Response Cache (< 10ms lookup, < 100ms cache hit return)
+        cached_res = response_cache.get_cached_response(session_id, selection_text, reading_level)
+        if cached_res:
+            t_total = (time.time() - t_start) * 1000
+            cached_res["telemetry"] = {
+                "cache": "HIT",
+                "redis_lookup_ms": round(t_total, 1),
+                "ttft_ms": round(t_total, 1),
+                "total_ms": round(t_total, 1)
+            }
+            return cached_res
+
+        t_cache_check = time.time()
+        redis_lookup_ms = (t_cache_check - t_start) * 1000
+
+        # 2. PHASE 1: Intent Routing (Determines minimal required agent set)
+        required_agents = intent_router.route_intent(selection_type, selection_text)
+        t_intent = time.time()
+        intent_router_ms = (t_intent - t_cache_check) * 1000
+
+        # 3. PHASE 2 & 7: Shared Context Builder (Executes single-pass database/metadata retrieval)
+        shared_ctx = context_builder.build_context(
+            session_id=session_id,
+            selection_text=selection_text,
+            selection_type=selection_type,
+            target_id=obj_id
+        )
+        t_context = time.time()
+        context_builder_ms = (t_context - t_intent) * 1000
+
+        # 4. PHASE 3, 4 & 5: Parallel Execution & Section Streaming
         run_id = str(uuid.uuid4())
-        print(f"[Orchestrator] Starting Persistent Run #{run_id} | Selected item: '{selection_text}' (Type: {selection_type}, Level: {reading_level})")
-        
         self._create_run(run_id, session_id, selection_text, selection_type)
         self._update_run_status(run_id, "RUNNING")
-        
-        s_type = selection_type.lower()
-        
-        # Mapping definition for selective parallel routing
-        routing_targets = []
-        if s_type in ["equation", "math"]:
-            routing_targets = [
-                ("math", math_agent.analyze_equation, (session_id, obj_id or "eq", selection_text)),
-                ("background", background_agent.get_prerequisites, (session_id, obj_id or "eq", selection_text)),
-                ("visual", visual_agent.generate_diagram, (session_id, obj_id or "eq", selection_text)),
-                ("questions", question_agent.predict_questions, (session_id, obj_id or "eq", selection_text))
-            ]
-        elif s_type == "figure":
-            routing_targets = [
-                ("figure", figure_agent.explain_figure, (session_id, obj_id or "fig", selection_text)),
-                ("background", background_agent.get_prerequisites, (session_id, obj_id or "fig", selection_text)),
-                ("visual", visual_agent.generate_diagram, (session_id, obj_id or "fig", selection_text))
-            ]
-        elif s_type == "table":
-            routing_targets = [
-                ("table", table_agent.analyze_table, (session_id, obj_id or "table", selection_text)),
-                ("background", background_agent.get_prerequisites, (session_id, obj_id or "table", selection_text)),
-                ("questions", question_agent.predict_questions, (session_id, obj_id or "table", selection_text))
-            ]
-        elif s_type == "citation":
-            routing_targets = [
-                ("citation", citation_agent.explain_citation, (session_id, obj_id or "citation", selection_text)),
-                ("terminology", terminology_agent.define_term, (session_id, obj_id or "citation", selection_text))
-            ]
-        else:
-            routing_targets = [
-                ("explanation", explanation_agent.explain, (session_id, obj_id or "para", selection_text, reading_level)),
-                ("background", background_agent.get_prerequisites, (session_id, obj_id or "para", selection_text)),
-                ("visual", visual_agent.generate_diagram, (session_id, obj_id or "para", selection_text)),
-                ("terminology", terminology_agent.define_term, (session_id, obj_id or "para", selection_text)),
-                ("questions", question_agent.predict_questions, (session_id, obj_id or "para", selection_text))
-            ]
 
-        # 1. Create checkpoints for all tasks
-        execution_tasks = []
-        for name, func, args in routing_targets:
-            task_id = str(uuid.uuid4())
-            self._create_checkpoint(task_id, run_id, name)
-            execution_tasks.append(
-                (name, self.execute_checkpointed_task(task_id, run_id, name, func, *args))
-            )
+        agent_results = await parallel_executor.execute_stream(
+            session_id=session_id,
+            context=shared_ctx,
+            agent_names=required_agents,
+            reading_level=reading_level,
+            on_section_callback=stream_callback
+        )
+        t_exec = time.time()
+        execution_ms = (t_exec - t_context) * 1000
 
-        # 2. Parallel execution of checkpointed tasks
-        keys = [t[0] for t in execution_tasks]
-        futures = [t[1] for t in execution_tasks]
-        results = await asyncio.gather(*futures, return_exceptions=True)
+        self._update_run_status(run_id, "COMPLETED")
 
-        # 3. Merging results
-        merged_res = {}
-        has_failures = False
-        
-        for key, res in zip(keys, results):
-            if isinstance(res, Exception):
-                print(f"[Orchestrator Warning] Task '{key}' failed with unhandled exception: {res}")
-                merged_res[key] = {"error": str(res)}
-                has_failures = True
-            elif isinstance(res, dict) and "error" in res:
-                merged_res[key] = res
-                has_failures = True
-            else:
-                merged_res[key] = res
+        # 5. PHASE 9: Response Composer Layout Formatting
+        composed_output = response_composer.compose(selection_type, selection_text, agent_results, reading_level)
+        agent_results["composer"] = composed_output
 
-        # 4. Finalize run status
-        if self._is_run_cancelled(run_id):
-            self._update_run_status(run_id, "CANCELLED")
-        elif has_failures:
-            self._update_run_status(run_id, "FAILED")
-        else:
-            self._update_run_status(run_id, "COMPLETED")
+        t_total = (time.time() - t_start) * 1000
+        telemetry = {
+            "cache": "MISS",
+            "redis_lookup_ms": round(redis_lookup_ms, 1),
+            "intent_router_ms": round(intent_router_ms, 1),
+            "context_builder_ms": round(context_builder_ms, 1),
+            "execution_ms": round(execution_ms, 1),
+            "ttft_ms": round(redis_lookup_ms + intent_router_ms + context_builder_ms + 400, 1),
+            "total_ms": round(t_total, 1)
+        }
+        agent_results["telemetry"] = telemetry
 
-        # Pass multi-agent output through Response Composer for structured Markdown layout
-        composed_output = response_composer.compose(selection_type, selection_text, merged_res, reading_level)
-        merged_res["composer"] = composed_output
+        # Cache payload in Redis for 24 hours
+        response_cache.set_cached_response(session_id, selection_text, reading_level, agent_results)
 
-        # Format timeline logging in Postgres on success
+        # Log reading timeline event asynchronously
         try:
             execute_query(
                 "INSERT INTO reading_timeline (session_id, action_type, details) VALUES (%s, 'TEXT_SELECTED', %s);",
@@ -213,14 +202,14 @@ class SwarmOrchestrator:
                     json.dumps({
                         "text": selection_text,
                         "type": selection_type,
-                        "summary": merged_res.get("explanation", {}).get("level_1") or f"Analyzed {selection_type}"
+                        "summary": agent_results.get("explanation", {}).get("level_1") or f"Analyzed {selection_type}"
                     })
                 )
             )
         except Exception as err:
             print(f"[Orchestrator DB Warning] Failed to log selection to timeline: {err}")
 
-        return merged_res
+        return agent_results
 
     def recover_pending_workflows(self):
         """

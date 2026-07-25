@@ -82,23 +82,32 @@ async def websocket_research(websocket: WebSocket, session_id: int):
                             "relationships": rels
                         }
                 
-                # Execute swarm orchestration analysis with custom prompt / doc object / reading level
+                # Progressive section streaming callback
+                def stream_section_ready(section_name: str, chunk_data: dict):
+                    asyncio.create_task(send_client_payload({
+                        "type": "section_stream",
+                        "section": section_name,
+                        "chunk": chunk_data
+                    }))
+
+                # Execute 10-phase swarm orchestration analysis with custom prompt / doc object / reading level
                 prompt_text = f"{custom_prompt}\n\nSelected Content:\n{sel_text}" if custom_prompt else sel_text
                 explanation = await swarm_orchestrator.process_selection(
-                    session_id, prompt_text, sel_type, obj_id, reading_level=reading_level
+                    session_id, prompt_text, sel_type, obj_id, reading_level=reading_level, stream_callback=stream_section_ready
                 )
                 
                 # Append interaction and result summary to persistent Redis history
                 summary = explanation.get("explanation", {}).get("level_1") or f"Analyzed {sel_type}"
                 redis_session.append_stream_history(session_id, sel_text, summary)
 
-                # Return progressive explanation payload
+                # Return complete finalized explanation & telemetry payload
                 await send_client_payload({
                     "type": "selection_explanation",
                     "text": sel_text,
                     "selection_type": sel_type,
                     "id": obj_id,
                     "explanation": explanation,
+                    "telemetry": explanation.get("telemetry"),
                     "metadata": obj_metadata
                 })
                 
