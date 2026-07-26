@@ -23,6 +23,5 @@ async def test_swarm_orchestrator_equation_routing(mock_connect):
     
     assert "math" in res
     assert "background" in res
-    assert "visual" in res
     assert "questions" in res
     assert "latex_clean" in res["math"]

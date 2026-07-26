@@ -20,6 +20,7 @@ from src.domain.swarm.intent_router import intent_router
 from src.domain.swarm.context_builder import context_builder
 from src.domain.swarm.response_cache import response_cache
 from src.domain.swarm.parallel_executor import parallel_executor
+from src.runtime.guardrails.guardrails import guardrails
 
 class SwarmOrchestrator:
     """
@@ -127,6 +128,19 @@ class SwarmOrchestrator:
         Target performance: TTFT < 700ms, First visible < 800ms, Cache hit < 100ms.
         """
         t_start = time.time()
+
+        # 0. Pre-LLM Guardrail Check (Prompt Injection Defense)
+        pre_guard = guardrails.validate_pre_llm(selection_text)
+        if not pre_guard["is_safe"]:
+            return {
+                "error": pre_guard["reason"],
+                "composer": {
+                    "selection_type": selection_type,
+                    "reading_level": reading_level,
+                    "composed_markdown": f"# ⚠️ Security Guardrail Notice\n\n{pre_guard['reason']}"
+                }
+            }
+        selection_text = pre_guard["sanitized_text"]
 
         # 1. PHASE 6 & 7: Check Redis Response Cache (< 10ms lookup, < 100ms cache hit return)
         cached_res = response_cache.get_cached_response(session_id, selection_text, reading_level)
