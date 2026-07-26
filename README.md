@@ -1,4 +1,4 @@
-# ResearchMind - Interactive AI Scholar Workspace
+# ResearchMind - Interactive AI Scholar Workspace & AI Runtime Engine
 
 > **Interactive research-paper workspace where the PDF remains the primary interface and a collaborating swarm of specialized AI agents enriches understanding in real-time.**
 
@@ -19,66 +19,68 @@ The paper remains central and visible at all times. Every sentence, equation, fi
 
 ---
 
-## Architectural Philosophy & Bio-Inspiration
+## Production AI Runtime Architecture
 
-ResearchMind Swarm v1 is inspired by the **SwarmSys** paper and the biological concept of **Ant Pheromone Stigmergy**.
-
-Traditional multi-agent frameworks rely on rigid, hardcoded DAG pipelines (e.g. LangGraph chains) or monolithic coordinators which cascade failure when a single API call errors out. Instead, ResearchMind Swarm treats research as an adaptive, non-linear process coordinated via environmental modification.
+ResearchMind is powered by a production-grade **AI Runtime Layer** (`backend/src/runtime/`) built on SOLID architectural principles:
 
 ```text
-       [Agent A] 
-           │
-           │ (depose "pheromone" event)
-           ▼
-┌──────────────────────────────────────┐
-│          Research Blackboard         │  <--- Environment Substrate
-│  [Working Memory]  [Event Queue]     │
-└──────────────────────────────────────┘
-           ▲
-           │ (senses pheromone, wakes up)
-           │
-       [Agent B]
+User Selection (PDF Native Text Layer)
+          │
+          ▼
+Pre-LLM Guardrail (Prompt Injection Defense) ──► Blocked if Malicious
+          │
+          ▼
+ResponseCache (Sub-10ms Redis Lookup) ────────► Cache HIT (< 100ms Return)
+          │ Cache MISS
+          ▼
+IntentRouter (Minimal Required Agent Set < 10ms)
+          │
+          ▼
+ContextBuilder (Single-Pass SharedContext Assembly < 50ms)
+          │
+          ▼
+Swarm Agents ──► AIHarness.execute(...) ──► LLM Provider (Token & Cost Tracked)
+          │
+          ▼
+Post-LLM Guardrail (Citation & Grounding Verification)
+          │
+          ▼
+ResponseComposer (Structured Markdown & Reading-Level Adaptor)
+          │
+          ▼
+WebSocket Progressive Stream (TTFT < 700ms) ──► SwarmAnalystPanel
 ```
 
-### Stigmergy & Event Pheromones
-In nature, ants coordinate by depositing chemical traces (pheromones) in the physical environment. Other ants detect these traces and adjust their trajectories, producing complex emergent behaviors.
+### 1. AI Harness (`runtime/harness/`)
+* Centralized infrastructure wrapper surrounding all LLM calls.
+* Manages prompt construction, context injection, token budgeting, execution resilience, and cost tracking ($/1K tokens).
+
+### 2. Multi-Stage Guardrail Engine (`runtime/guardrails/`)
+* **Pre-LLM Guard**: Scans incoming text selections for prompt injection patterns inside PDFs.
+* **Post-LLM Guard**: Verifies citation references against database metadata to prevent hallucinated citations.
+* **Pre-UI Guard**: Validates JSON schema integrity before output is composed and rendered in the frontend.
+
+### 3. High-Performance Latency Pipeline (10-Phase Engine)
+* **Intent Router**: Selective routing by content type (`equation` -> `math`, `background`, `questions`), avoiding unnecessary agent executions.
+* **Single-Pass SharedContext Builder**: Fetches titles, section headers, surrounding paragraphs, figures, and citations **in a single pass** to eliminate duplicate queries.
+* **LLM Tier Router**: Maps agent tasks to complexity model tiers (`FAST`, `REASONING`, `VISION`).
+* **Progressive Section Streaming**: Streams Markdown section chunks over WebSocket as soon as available (**Time-To-First-Token < 700ms**).
+* **Developer Telemetry Badge**: Displays real-time stage timings in the UI (`⚡ CACHE HIT (18ms)` / `⚡ TTFT: 520ms | 1.4s`).
+
+### 4. Response Composer & Reading-Level Adaptor
+* Formats multi-agent outputs into structured Markdown tab templates (`Explain`, `Math`, `Background`, `Visual`, `Citation`).
+* Supports dynamic Reading-Level Selection: 🎓 **Beginner**, 📖 **Undergraduate**, 🧪 **Researcher**.
+* Interactive **Collapsible Section Accordions** in `SwarmAnalystPanel`.
+
+### 5. Adobe Acrobat-Fidelity Selection Engine
+* Uses PDF.js native text layer and spatial spatial indexing to provide smooth, continuous text selection matching Adobe Acrobat fidelity.
 
 ---
 
-## System Architecture & Progressive Pipeline
+## Collaborating Agent Swarms
 
-ResearchMind is built as a **modular monolith** optimized for low-latency, desktop-like responsiveness:
+A central **Swarm Orchestrator** manages user selection actions, activating only the required sub-agents in parallel:
 
-```text
-+---------------------------------------------------------------+
-|                       Research Paper Viewer                   |
-|  Entire paper displayed exactly like a PDF                    |
-|  User highlights:                                             |
-|  "The transformer encoder generates contextual embeddings..." |
-+-------------------------------------+-------------------------+
-                                      |
-                                      | WebSocket Event
-                                      V
-+---------------------------------------------------------------+
-|                 AI Research Assistant Panel                   |
-|---------------------------------------------------------------|
-| Simple Intuition • Detailed Mechanics • Prerequisites          |
-| Equation Derivations • ASCII Block Diagrams                   |
-+---------------------------------------------------------------+
-```
-
-### 1. Progressive Document Pipeline
-* **Capability Detector**: Performs a quick inspection of character density and image presence to determine processing capabilities.
-* **Layout Coordinate Parser**: Employs PyMuPDF to extract sections, paragraphs, equations, figures, and bibliography elements along with absolute pixel bounding boxes page-by-page.
-* **PostgreSQL Relational Schema**: Houses element node IDs, parent boundaries, and topological citation relationships.
-
-### 2. Multi-Level Caching & Indexing
-* **L1 Cache (Redis)**: Caches agent summary queries and raw paragraph lookups.
-* **L2 Vector Database (Qdrant)**: Indices sentence-transformer chunks page-by-page in the background.
-* **L3 Relational Database (PostgreSQL)**: Handles persistent user session files, research notebooks, and interaction timelines.
-
-### 3. Collaborating Agent Swarms
-A central **Swarm Orchestrator** manages user selection actions, activating only the relevant sub-agents in parallel to minimize latency:
 * **ExplanationAgent**: Translates academic formulas and statements into plain English.
 * **MathematicsAgent**: Generates LaTeX equations, maps variable definitions, and breaks down derivations step-by-step.
 * **BackgroundKnowledgeAgent**: Detects prerequisite concepts.
@@ -86,10 +88,6 @@ A central **Swarm Orchestrator** manages user selection actions, activating only
 * **FigureInterpretationAgent / TableAnalysisAgent**: Interprets axes, legends, trends, and quantitative tabular benchmarks.
 * **CitationAgent**: Resolves linked referenced publications.
 * **QuestionPredictionAgent**: Recommends relevant follow-up inquiries.
-
-### 4. GPU-Saving Virtualized PDF Reader
-* Renders pages using Next.js canvas rendering upscaled dynamically to prevent text blurriness on Retina screens.
-* Uses an `IntersectionObserver` to unmount canvases outside the viewport window to prevent memory leaks, maintaining a smooth 60fps scrolling experience.
 
 ---
 
@@ -99,12 +97,13 @@ A central **Swarm Orchestrator** manages user selection actions, activating only
 | :--- | :--- | :--- |
 | **Frontend** | Next.js 15 (App Router), TS | Desktop IDE workspace panels & state management |
 | **Styling** | Tailwind CSS v4, Outfit font | Premium Chromium-Black theme styles |
-| **PDF Rendering** | HTML5 Canvas + PDF.js | High-DPI crisp text rendering layer |
+| **PDF Engine** | PDF.js Native Text Layer + Canvas | Adobe Acrobat-grade continuous text selection |
 | **Backend** | FastAPI, Python 3.11+ | High-performance REST and WebSocket gateways |
-| **Agent Orchestrator** | asyncio, Python threads | Selective agent routing matrices |
+| **AI Runtime** | AIHarness & GuardrailEngine | Token budgeting, cost tracking & safety guards |
+| **Swarm Pipeline** | IntentRouter & ParallelExecutor | Selective concurrent agent execution |
 | **Vector Search** | Qdrant | Cosine-similarity sentence embeddings |
 | **ACID Database** | PostgreSQL | Relational schemas, notebook logs, & timeline events |
-| **Caching** | Redis Cache | Sub-50ms query cache retrievals |
+| **Caching** | Redis Cache | Sub-10ms query & response cache retrievals |
 
 ---
 
@@ -113,6 +112,7 @@ A central **Swarm Orchestrator** manages user selection actions, activating only
 ### 1. Set Up Environment Variables
 Create a `.env` file in the root workspace directory:
 ```env
+GROQ_API_KEY=your-groq-api-key
 OPENAI_API_KEY=your-openai-api-key
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/researchmind
 REDIS_HOST=localhost
@@ -121,7 +121,7 @@ QDRANT_HOST=localhost
 QDRANT_PORT=6333
 ```
 
-### 2. Run Database & Infrastructure Services
+### 2. Run Infrastructure Services
 Launch PostgreSQL, Qdrant, and Redis containers via Docker Compose:
 ```bash
 docker-compose up -d
@@ -146,7 +146,9 @@ Open **`http://localhost:3001`** in your browser to begin reading!
 
 ---
 
-## References
+## References & Architecture Docs
 
+* [Swarm Performance Architecture Documentation](docs/swarm_performance_architecture.md)
+* [AI Runtime Architecture Documentation](docs/ai_runtime_architecture.md)
+* [Response Composer Architecture Documentation](docs/response_composer_architecture.md)
 * [SwarmSys: Decentralized Swarm-Inspired Agents for Scalable and Adaptive Reasoning](https://arxiv.org/abs/2510.10047)
-
