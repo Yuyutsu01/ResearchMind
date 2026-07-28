@@ -10,6 +10,7 @@ import json
 from typing import Dict, Any, Optional, Callable
 from src.adapters.llm_adapter import llm_client
 from src.adapters.telemetry import telemetry
+from src.runtime.memory.research_memory import research_memory
 
 class AIHarness:
     """
@@ -39,9 +40,16 @@ class AIHarness:
     ) -> Dict[str, Any]:
         """
         Executes an LLM call wrapped inside the Harness.
-        Injects context data, tracks token budgets, and logs telemetry metrics.
+        Injects research memory, SharedContext data, tracks token budgets, and logs telemetry metrics.
         """
         t_start = time.time()
+
+        # 0. Inject Research Memory Context if available
+        enriched_system_prompt = system_prompt
+        if session_id > 0:
+            mem_ctx = research_memory.build_memory_prompt_context(session_id)
+            if mem_ctx:
+                enriched_system_prompt = f"{mem_ctx}{system_prompt}"
 
         # 1. Context Injection: Enrich prompt with SharedContext if provided
         enriched_user_prompt = user_prompt
@@ -57,7 +65,7 @@ class AIHarness:
         # 3. LLM Execution via provider adapter
         result = llm_client.get_structured_json(
             cache_key=cache_key,
-            system_prompt=system_prompt,
+            system_prompt=enriched_system_prompt,
             user_prompt=enriched_user_prompt,
             session_id=session_id
         )
