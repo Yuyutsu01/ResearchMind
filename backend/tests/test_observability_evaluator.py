@@ -26,9 +26,9 @@ def test_telemetry_engine_recording():
 def test_evaluation_engine_completeness_and_citation():
     """Verifies EvaluationEngine scores response completeness and citation validity."""
     sample_payload = {
-        "citation_references": ["ref_123"],
+        "citation_references": [],
         "composer": {
-            "composed_markdown": "# Overview\nSimple explanation.\n# Key Takeaways\nTakeaway 1.\n# Background Concepts\nPrerequisites."
+            "composed_markdown": "# Overview\nTransformers use self-attention mechanisms.\n# Key Takeaways\nTakeaway 1.\n# Background Concepts\nPrerequisites."
         }
     }
     
@@ -40,5 +40,5 @@ def test_evaluation_engine_completeness_and_citation():
     )
     
     assert report.response_completeness == 1.0
-    assert report.hallucination_score >= 0.6
+    assert report.hallucination_score >= 0.7
     assert report.to_dict()["is_quality_pass"] is True
