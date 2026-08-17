@@ -38,11 +38,12 @@ class ResponseComposer:
     else:
       composed_markdown = self._compose_explain_tab(selection_text, agent_outputs, reading_level)
 
+    clean_outputs = {k: v for k, v in agent_outputs.items() if k != "composer"}
     return {
       "selection_type": selection_type,
       "reading_level": reading_level,
       "composed_markdown": composed_markdown,
-      "raw_agent_outputs": agent_outputs
+      "raw_agent_outputs": clean_outputs
     }
 
   def _compose_explain_tab(self, text: str, outputs: Dict[str, Any], level: str) -> str:

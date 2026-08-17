@@ -20,10 +20,13 @@ export default function Dashboard() {
   const [logs, setLogs] = useState<string[]>([]);
   const wsRef = useRef<WebSocket | null>(null);
 
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!e.target.files) return;
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
+    setErrorMessage(null);
     
     setUploading(true);
     const formData = new FormData();
@@ -34,14 +37,18 @@ export default function Dashboard() {
         method: "POST",
         body: formData,
       });
+      if (!res.ok) {
+        throw new Error(`Upload server error (HTTP ${res.status})`);
+      }
       const data = await res.json();
       if (data.success) {
         setFileId(data.file_id);
         // Automatically launch session
         autoLaunchSession(data.file_id);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error("Upload failed", err);
+      setErrorMessage(`Backend Connection Failed: Ensure FastAPI backend is running on ${API_BASE}. Run 'cd backend; python -m uvicorn src.main:app --port 8001'.`);
     } finally {
       setUploading(false);
     }
@@ -146,15 +153,12 @@ export default function Dashboard() {
         {/* Gradient Header */}
         <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-blue-600 to-indigo-600" />
         
-        <div className="flex flex-col items-center text-center gap-2">
-          <div className="w-12 h-12 rounded-xl bg-blue-600/10 border border-blue-600/20 flex items-center justify-center text-blue-400 mb-2">
-            <BookOpen className="w-6 h-6 stroke-[1.5]" />
+        {errorMessage && (
+          <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-lg text-xs flex items-start gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+            <span className="leading-relaxed">{errorMessage}</span>
           </div>
-          <h1 className="font-header font-bold text-2xl text-white tracking-tight">ResearchMind</h1>
-          <p className="text-xs text-slate-500 max-w-xs leading-normal">
-            Research Companion: Interactive Swarm AI Workspace for Scientific Papers.
-          </p>
-        </div>
+        )}
 
         {isProcessing ? (
           <div className="flex flex-col gap-4 py-4 animate-in fade-in duration-300">

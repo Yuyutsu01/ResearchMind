@@ -53,7 +53,8 @@ class LLMProvider:
 class OpenAIProvider(LLMProvider):
     def __init__(self, api_key: str, base_url: Optional[str] = None):
         self.api_key = api_key
-        self.base_url = base_url or "https://api.openai.com/v1"
+        raw_url = base_url or "https://api.openai.com/v1"
+        self.base_url = raw_url.rstrip("/").removesuffix("/chat/completions").removesuffix("/chat")
 
     @retry_with_backoff()
     def get_structured_json(self, system_prompt: str, user_prompt: str, model: str, timeout: float = 30.0) -> dict:
@@ -86,7 +87,8 @@ class OpenAIProvider(LLMProvider):
 class GroqProvider(LLMProvider):
     def __init__(self, api_key: str, base_url: Optional[str] = None):
         self.api_key = api_key
-        self.base_url = base_url or "https://api.groq.com/openai/v1"
+        raw_url = base_url or "https://api.groq.com/openai/v1"
+        self.base_url = raw_url.rstrip("/").removesuffix("/chat/completions").removesuffix("/chat")
 
     @retry_with_backoff()
     def get_structured_json(self, system_prompt: str, user_prompt: str, model: str, timeout: float = 30.0) -> dict:
