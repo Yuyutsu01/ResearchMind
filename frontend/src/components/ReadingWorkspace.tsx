@@ -308,10 +308,13 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
 
   // Swarm explanation & Reading Level states
   const [activeTab, setActiveTab] = useState<"explain" | "notebook" | "timeline">("explain");
-  const [swarmSubTab, setSwarmSubTab] = useState<"explain" | "math" | "background" | "visual" | "questions">("explain");
-  const [readingLevel, setReadingLevel] = useState<"Beginner" | "Undergraduate" | "Researcher">("Beginner");
   const [currentExplanation, setCurrentExplanation] = useState<any>(null);
   const [explainingState, setExplainingState] = useState(false);
+
+  // Conversational Chat state
+  const [conversationId, setConversationId] = useState<string>("");
+  const [initialAnalysisMarkdown, setInitialAnalysisMarkdown] = useState<string>("");
+  const [chatMessages, setChatMessages] = useState<Array<{ id: string; role: "user" | "assistant"; content: string }>>([]);
 
   // Notebook state
   const [notebook, setNotebook] = useState<any[]>([]);
@@ -343,7 +346,6 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
       const data = await res.json();
       if (data.success) {
         setPaperObjects(data.objects || []);
-        // Load into spatial index for sub-1ms hit detection
         spatialIndex.loadObjects(data.objects || []);
       }
     } catch (err) {
@@ -392,15 +394,24 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
     }
   }, [ws]);
 
-  // Listen to WebSocket selection / progressive parsing returns
+  // Listen to WebSocket selection / chat returns
   useEffect(() => {
     if (!ws) return;
     const handleWsMessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       if (data.type === "selection_explanation") {
         setCurrentExplanation(data.explanation);
+        setConversationId(data.conversation_id || "");
+        setInitialAnalysisMarkdown(data.explanation?.composer?.composed_markdown || "");
+        setChatMessages([]);
         setExplainingState(false);
         fetchTimeline();
+      } else if (data.type === "chat_response") {
+        setChatMessages((prev) => [
+          ...prev,
+          { id: String(Date.now()), role: "assistant", content: data.content }
+        ]);
+        setExplainingState(false);
       } else if (data.type === "progress_update") {
         setParsingStatus({
           step: data.step,
@@ -418,7 +429,7 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
   }, [ws, fetchPaperDetails, fetchPaperObjects, fetchTimeline]);
 
   // Submit selections to swarm orchestrator with enriched document object metadata
-  const triggerSwarmExplanation = (type: string, customPrompt?: string, targetLevel?: "Beginner" | "Undergraduate" | "Researcher") => {
+  const triggerSwarmExplanation = (type: string, customPrompt?: string) => {
     if (!ws || !selectedText) return;
     setShowHighlightMenu(false);
 
@@ -429,13 +440,9 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
 
     setExplainingState(true);
     setActiveTab("explain");
+    setInitialAnalysisMarkdown("");
+    setChatMessages([]);
     
-    // Auto route swarm subtab focus
-    const lowerType = type.toLowerCase();
-    if (lowerType === "equation" || lowerType === "math") setSwarmSubTab("math");
-    else if (lowerType === "visual") setSwarmSubTab("visual");
-    else setSwarmSubTab("explain");
-
     // Phase 8: Resolve structured semantic payload
     const dummyBBox = { x0: 0, y0: 0, x1: 0, y1: 0 };
     const semanticContext = semanticResolver.resolveContext(
@@ -450,12 +457,34 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
       text: selectedText,
       selection_type: type,
       id: selectedObjectId || selectedDocumentObject?.id || null,
+      page: selectedDocumentObject?.page || 1,
       custom_prompt: customPrompt || null,
-      reading_level: targetLevel || readingLevel,
       document_object: semanticContext
     };
 
     ws.send(JSON.stringify(payload));
+  };
+
+  const handleSendFollowup = (question: string) => {
+    if (!ws || !conversationId) return;
+    setChatMessages((prev) => [
+      ...prev,
+      { id: String(Date.now()), role: "user", content: question }
+    ]);
+    setExplainingState(true);
+
+    ws.send(JSON.stringify({
+      type: "chat_followup",
+      conversation_id: conversationId,
+      question: question
+    }));
+  };
+
+  const handleResetAnalysis = () => {
+    setSelectedText("");
+    setInitialAnalysisMarkdown("");
+    setChatMessages([]);
+    setConversationId("");
   };
 
   const saveNoteToNotebook = async () => {
@@ -630,19 +659,22 @@ export const ReadingWorkspace: React.FC<ReadingWorkspaceProps> = ({ sessionId, a
         {/* Tab Viewport */}
         <div className="flex-1 relative overflow-hidden bg-[#1e1e1e]">
           
-          {/* TAB 1: Swarm Analyst */}
+          {/* TAB 1: Swarm Analyst Chat */}
           <div className={`absolute inset-0 flex flex-col ${activeTab === "explain" ? "block" : "hidden"}`}>
             <SwarmAnalystPanel
-              markdownContent={currentExplanation?.composer?.composed_markdown || ""}
               selectedText={selectedText}
-              readingLevel={readingLevel}
-              onLevelChange={(newLevel) => {
-                setReadingLevel(newLevel);
-                if (selectedText) {
-                  triggerSwarmExplanation(selectedDocumentObject?.type || "TEXT", undefined, newLevel);
-                }
-              }}
+              conversationId={conversationId}
+              pageNum={selectedDocumentObject?.page || 1}
+              sectionTitle={selectedDocumentObject?.type || "Selection Analysis"}
+              initialAnalysisMarkdown={initialAnalysisMarkdown}
+              chatMessages={chatMessages}
               isLoading={explainingState}
+              onSendFollowup={handleSendFollowup}
+              onResetAnalysis={handleResetAnalysis}
+              onNavigateToPage={(pageNum) => {
+                const el = document.querySelector(`[data-page-number="${pageNum}"]`);
+                if (el) el.scrollIntoView({ behavior: "smooth" });
+              }}
               telemetry={currentExplanation?.telemetry}
             />
           </div>
