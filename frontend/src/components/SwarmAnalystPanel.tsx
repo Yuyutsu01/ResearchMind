@@ -1,16 +1,28 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { ChevronDown, ChevronRight, GraduationCap, BookOpen, FlaskConical, Sparkles, Copy, Check } from "lucide-react";
+import { Sparkles, Send, RefreshCw, Copy, Check, FileText, CornerDownLeft, RotateCcw } from "lucide-react";
+
+export interface ChatMessageItem {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp?: number;
+}
 
 interface SwarmAnalystPanelProps {
-  markdownContent: string;
   selectedText: string;
-  readingLevel: "Beginner" | "Undergraduate" | "Researcher";
-  onLevelChange: (level: "Beginner" | "Undergraduate" | "Researcher") => void;
+  conversationId?: string;
+  pageNum?: number;
+  sectionTitle?: string;
+  initialAnalysisMarkdown?: string;
+  chatMessages: ChatMessageItem[];
   isLoading: boolean;
+  onSendFollowup: (question: string) => void;
+  onResetAnalysis: () => void;
+  onNavigateToPage?: (pageNum: number) => void;
   telemetry?: {
     cache?: string;
     redis_lookup_ms?: number;
@@ -23,77 +35,52 @@ interface SwarmAnalystPanelProps {
 }
 
 export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
-  markdownContent,
   selectedText,
-  readingLevel,
-  onLevelChange,
+  conversationId,
+  pageNum = 1,
+  sectionTitle = "Selection Analysis",
+  initialAnalysisMarkdown,
+  chatMessages,
   isLoading,
+  onSendFollowup,
+  onResetAnalysis,
+  onNavigateToPage,
   telemetry,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [inputQuestion, setInputQuestion] = useState("");
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Parse markdown content into collapsible sections based on `# Heading` anchors
-  const sections = useMemo(() => {
-    if (!markdownContent) return [];
-    
-    const lines = markdownContent.split("\n");
-    const parsedSections: Array<{ id: string; title: string; content: string }> = [];
-    let currentTitle = "Overview";
-    let currentContent: string[] = [];
+  // Auto-scroll chat thread to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMessages, isLoading, initialAnalysisMarkdown]);
 
-    for (const line of lines) {
-      if (line.startsWith("# ")) {
-        if (currentContent.length > 0 || currentTitle !== "Overview") {
-          parsedSections.push({
-            id: currentTitle.toLowerCase().replace(/[^a-z0-9]/g, "-"),
-            title: currentTitle,
-            content: currentContent.join("\n").trim(),
-          });
-        }
-        currentTitle = line.replace("# ", "").trim();
-        currentContent = [];
-      } else {
-        currentContent.push(line);
-      }
-    }
-
-    if (currentContent.length > 0 || currentTitle !== "Overview") {
-      parsedSections.push({
-        id: currentTitle.toLowerCase().replace(/[^a-z0-9]/g, "-"),
-        title: currentTitle,
-        content: currentContent.join("\n").trim(),
-      });
-    }
-
-    return parsedSections;
-  }, [markdownContent]);
-
-  const toggleSection = (sectionId: string) => {
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [sectionId]: !prev[sectionId],
-    }));
-  };
-
-  const handleCopy = () => {
-    navigator.clipboard.writeText(markdownContent);
+  const handleCopy = (text: string) => {
+    navigator.clipboard.writeText(text);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputQuestion.trim() || isLoading) return;
+    onSendFollowup(inputQuestion.trim());
+    setInputQuestion("");
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#18181b] text-slate-200 select-text overflow-hidden">
-      {/* 1. Header & Reading-Level Adaptor Toggle */}
+      {/* 1. Header with Context Chip & Telemetry */}
       <div className="flex-shrink-0 border-b border-white/10 p-3 bg-[#121212] select-none flex flex-col gap-2">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-xs font-bold text-blue-400">
-            <Sparkles className="w-4 h-4" />
-            <span>Swarm Analyst Intelligence</span>
+            <Sparkles className="w-4 h-4 text-blue-400" />
+            <span>Swarm Analyst Research Chat</span>
           </div>
 
           <div className="flex items-center gap-2">
-            {/* Developer Telemetry Timing Badge */}
+            {/* Telemetry Timing Badge */}
             {telemetry && (
               <span
                 className={`text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase ${
@@ -101,124 +88,131 @@ export const SwarmAnalystPanel: React.FC<SwarmAnalystPanelProps> = ({
                     ? "bg-green-500/20 text-green-400 border-green-500/30"
                     : "bg-blue-500/20 text-blue-400 border-blue-500/30"
                 }`}
-                title={`Redis: ${telemetry.redis_lookup_ms}ms | Intent: ${telemetry.intent_router_ms}ms | Context: ${telemetry.context_builder_ms}ms | TTFT: ${telemetry.ttft_ms}ms`}
+                title={`Redis: ${telemetry.redis_lookup_ms}ms | Intent: ${telemetry.intent_router_ms}ms | TTFT: ${telemetry.ttft_ms}ms`}
               >
                 ⚡ {telemetry.cache === "HIT" ? `CACHE HIT (${telemetry.total_ms}ms)` : `TTFT: ${telemetry.ttft_ms}ms | ${telemetry.total_ms}ms`}
               </span>
             )}
 
-            {markdownContent && (
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-all"
-                title="Copy markdown response"
-              >
-                {copied ? <Check className="w-3 h-3 text-green-400" /> : <Copy className="w-3 h-3" />}
-                <span>{copied ? "Copied" : "Copy"}</span>
-              </button>
-            )}
+            {/* Clear / New Analysis Reset Button */}
+            <button
+              onClick={onResetAnalysis}
+              className="flex items-center gap-1 text-[10px] text-slate-400 hover:text-white px-2 py-1 rounded bg-white/5 hover:bg-white/10 transition-all"
+              title="Start New Analysis"
+            >
+              <RotateCcw className="w-3 h-3" />
+              <span>Reset</span>
+            </button>
           </div>
         </div>
 
-        {/* Reading Level Selector Buttons */}
-        <div className="grid grid-cols-3 gap-1 bg-[#1e1e1e] p-1 rounded-lg border border-white/5">
-          <button
-            onClick={() => onLevelChange("Beginner")}
-            className={`flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider py-1.5 rounded transition-all ${
-              readingLevel === "Beginner"
-                ? "bg-blue-600 text-white shadow"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-            }`}
-          >
-            <GraduationCap className="w-3 h-3 text-blue-300" />
-            <span>Beginner</span>
-          </button>
-
-          <button
-            onClick={() => onLevelChange("Undergraduate")}
-            className={`flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider py-1.5 rounded transition-all ${
-              readingLevel === "Undergraduate"
-                ? "bg-indigo-600 text-white shadow"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-            }`}
-          >
-            <BookOpen className="w-3 h-3 text-indigo-300" />
-            <span>Undergrad</span>
-          </button>
-
-          <button
-            onClick={() => onLevelChange("Researcher")}
-            className={`flex items-center justify-center gap-1 text-[9px] font-bold uppercase tracking-wider py-1.5 rounded transition-all ${
-              readingLevel === "Researcher"
-                ? "bg-purple-600 text-white shadow"
-                : "text-slate-400 hover:text-slate-200 hover:bg-white/5"
-            }`}
-          >
-            <FlaskConical className="w-3 h-3 text-purple-300" />
-            <span>Researcher</span>
-          </button>
-        </div>
-      </div>
-
-      {/* 2. Scrollable Body: Selected Highlight, Progressive Timeline & Collapsible Sections */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollable">
+        {/* Compact Context Chip */}
         {selectedText && (
-          <div className="bg-[#121212] border-l-2 border-l-blue-500 border-white/5 border p-3 rounded text-xs italic text-slate-300">
-            "{selectedText}"
+          <div className="flex items-center gap-2 bg-[#1e1e1e] border border-white/10 px-2.5 py-1.5 rounded-lg text-[11px] text-slate-300">
+            <button
+              onClick={() => onNavigateToPage?.(pageNum)}
+              className="flex items-center gap-1 text-blue-400 hover:underline font-mono font-bold flex-shrink-0"
+              title={`Jump to Page ${pageNum}`}
+            >
+              <FileText className="w-3 h-3" />
+              <span>Page {pageNum}</span>
+            </button>
+            <span className="text-slate-600">·</span>
+            <span className="truncate italic text-slate-400">"{selectedText}"</span>
           </div>
         )}
+      </div>
 
-        {isLoading ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-500 gap-4">
+      {/* 2. Main Scrollable Chat Thread */}
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col gap-4 scrollable">
+        {/* Initial Analysis Message */}
+        {initialAnalysisMarkdown ? (
+          <div className="bg-[#121212]/90 border border-white/10 rounded-xl p-4 text-xs leading-relaxed text-slate-200 shadow-md prose prose-invert max-w-none">
+            <div className="flex items-center justify-between border-b border-white/5 pb-2 mb-3">
+              <span className="text-[10px] uppercase font-bold text-blue-400 tracking-wider">Initial Swarm Analysis</span>
+              <button
+                onClick={() => handleCopy(initialAnalysisMarkdown)}
+                className="text-slate-500 hover:text-white transition-colors"
+                title="Copy markdown"
+              >
+                {copied ? <Check className="w-3.5 h-3.5 text-green-400" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {initialAnalysisMarkdown}
+            </ReactMarkdown>
+          </div>
+        ) : isLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
             <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin" />
-            <div className="flex flex-col gap-1.5 text-center text-[10px] font-mono text-slate-400">
+            <div className="flex flex-col gap-1 text-center text-[10px] font-mono text-slate-400">
               <span className="text-green-400 font-bold">✓ Single-Pass SharedContext Built</span>
-              <span className="text-blue-400 font-bold animate-pulse">⚡ Parallel Execution & Section Streaming...</span>
+              <span className="text-blue-400 font-bold animate-pulse">⚡ Streaming Substantive Research Analysis...</span>
             </div>
           </div>
-        ) : sections.length > 0 ? (
-          <div className="flex flex-col gap-3">
-            {sections.map((sec) => {
-              const isCollapsed = !!collapsedSections[sec.id];
-              return (
-                <div
-                  key={sec.id}
-                  className="bg-[#121212]/90 border border-white/5 rounded-xl overflow-hidden shadow-sm transition-all"
-                >
-                  {/* Collapsible Section Header */}
-                  <button
-                    onClick={() => toggleSection(sec.id)}
-                    className="w-full flex items-center justify-between p-3 bg-white/5 hover:bg-white/10 text-left transition-colors select-none"
-                  >
-                    <h4 className="text-xs font-bold text-blue-300 uppercase tracking-wide flex items-center gap-1.5">
-                      <span>{sec.title}</span>
-                    </h4>
-                    {isCollapsed ? (
-                      <ChevronRight className="w-4 h-4 text-slate-400" />
-                    ) : (
-                      <ChevronDown className="w-4 h-4 text-slate-400" />
-                    )}
-                  </button>
-
-                  {/* Section Markdown Body */}
-                  {!isCollapsed && sec.content && (
-                    <div className="p-3.5 text-xs text-slate-300 leading-relaxed border-t border-white/5 prose prose-invert max-w-none">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {sec.content}
-                      </ReactMarkdown>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
         ) : (
-          <div className="text-center py-16 text-slate-500 text-xs flex flex-col items-center gap-2">
-            <BookOpen className="w-8 h-8 stroke-[1.5]" />
-            <p>Select any equation, text, or figure in the paper to invoke Swarm Analyst.</p>
+          <div className="text-center py-20 text-slate-500 text-xs flex flex-col items-center gap-2">
+            <Sparkles className="w-8 h-8 text-blue-500/50" />
+            <p>Select any equation, text, table, or figure in the paper to start an interactive research conversation.</p>
           </div>
         )}
+
+        {/* Follow-up Chat Message History */}
+        {chatMessages.map((msg) => (
+          <div
+            key={msg.id}
+            className={`flex flex-col gap-1 max-w-[90%] text-xs ${
+              msg.role === "user" ? "self-end items-end" : "self-start items-start"
+            }`}
+          >
+            <div
+              className={`p-3.5 rounded-xl leading-relaxed ${
+                msg.role === "user"
+                  ? "bg-blue-600 text-white rounded-br-none font-medium shadow-sm"
+                  : "bg-[#121212] border border-white/10 text-slate-200 rounded-bl-none prose prose-invert max-w-none shadow-md"
+              }`}
+            >
+              {msg.role === "user" ? (
+                <span>{msg.content}</span>
+              ) : (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {msg.content}
+                </ReactMarkdown>
+              )}
+            </div>
+          </div>
+        ))}
+
+        {/* Loading Spinner for follow-up responses */}
+        {isLoading && initialAnalysisMarkdown && (
+          <div className="self-start flex items-center gap-2 text-xs text-blue-400 font-mono bg-[#121212] border border-blue-500/20 px-3 py-2 rounded-xl">
+            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+            <span>Analyzing follow-up question...</span>
+          </div>
+        )}
+
+        <div ref={messagesEndRef} />
       </div>
+
+      {/* 3. Fixed Bottom Chat Composer */}
+      <form onSubmit={handleFormSubmit} className="flex-shrink-0 p-3 bg-[#121212] border-t border-white/10 flex items-center gap-2">
+        <input
+          type="text"
+          value={inputQuestion}
+          onChange={(e) => setInputQuestion(e.target.value)}
+          placeholder={selectedText ? "Ask anything about this selection..." : "Select paper text to begin..."}
+          disabled={!selectedText || isLoading}
+          className="flex-1 bg-[#1e1e1e] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 disabled:opacity-50 transition-colors"
+        />
+        <button
+          type="submit"
+          disabled={!inputQuestion.trim() || isLoading}
+          className="bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl disabled:opacity-40 transition-all flex items-center justify-center flex-shrink-0"
+          title="Send Follow-up Question"
+        >
+          <Send className="w-4 h-4" />
+        </button>
+      </form>
     </div>
   );
 };
