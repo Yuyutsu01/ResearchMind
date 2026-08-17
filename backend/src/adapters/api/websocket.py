@@ -50,9 +50,9 @@ async def websocket_research(websocket: WebSocket, session_id: int):
                 sel_text = msg.get("text", "")
                 sel_type = msg.get("selection_type", "TEXT")
                 obj_id = msg.get("id")
+                page_num = int(msg.get("page", 1))
                 custom_prompt = msg.get("custom_prompt")
                 doc_obj = msg.get("document_object")
-                reading_level = msg.get("reading_level", "Beginner")
                 
                 obj_metadata = doc_obj or {}
                 # If selection comes from a pre-parsed object ID, resolve coordinates/context from DB if not already provided
@@ -90,14 +90,14 @@ async def websocket_research(websocket: WebSocket, session_id: int):
                         "chunk": chunk_data
                     }))
 
-                # Execute 10-phase swarm orchestration analysis with custom prompt / doc object / reading level
+                # Execute 10-phase swarm orchestration analysis
                 prompt_text = f"{custom_prompt}\n\nSelected Content:\n{sel_text}" if custom_prompt else sel_text
                 explanation = await swarm_orchestrator.process_selection(
-                    session_id, prompt_text, sel_type, obj_id, reading_level=reading_level, stream_callback=stream_section_ready
+                    session_id, prompt_text, sel_type, obj_id, page_num=page_num, stream_callback=stream_section_ready
                 )
                 
                 # Append interaction and result summary to persistent Redis history
-                summary = explanation.get("explanation", {}).get("level_1") or f"Analyzed {sel_type}"
+                summary = f"Analyzed {sel_type}"
                 redis_session.append_stream_history(session_id, sel_text, summary)
 
                 # Return complete finalized explanation & telemetry payload
@@ -106,9 +106,38 @@ async def websocket_research(websocket: WebSocket, session_id: int):
                     "text": sel_text,
                     "selection_type": sel_type,
                     "id": obj_id,
+                    "conversation_id": explanation.get("conversation_id"),
+                    "page": page_num,
                     "explanation": explanation,
                     "telemetry": explanation.get("telemetry"),
-                    "metadata": obj_metadata
+                    "document_object": obj_metadata
+                })
+
+            # 3. Conversational Follow-up Question Handler
+            elif msg.get("type") == "chat_followup":
+                conv_id = msg.get("conversation_id", "")
+                question = msg.get("question", "")
+
+                def stream_section_ready(section_name: str, chunk_data: dict):
+                    asyncio.create_task(send_client_payload({
+                        "type": "section_stream",
+                        "section": section_name,
+                        "chunk": chunk_data
+                    }))
+
+                res = await swarm_orchestrator.process_chat_followup(
+                    session_id=session_id,
+                    conversation_id=conv_id,
+                    question=question,
+                    stream_callback=stream_section_ready
+                )
+
+                await send_client_payload({
+                    "type": "chat_response",
+                    "conversation_id": conv_id,
+                    "role": "assistant",
+                    "content": res["content"],
+                    "telemetry": res.get("telemetry")
                 })
                 
     except WebSocketDisconnect:
