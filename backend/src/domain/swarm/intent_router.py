@@ -46,4 +46,22 @@ class IntentRouter:
         print(f"[IntentRouter] Selection type '{selection_type}' routed to minimal agent set: {agents}")
         return agents
 
+    def route_followup_intent(self, question: str) -> List[str]:
+        """
+        Classifies user follow-up questions to activate only required sub-agents.
+        """
+        q = (question or "").lower()
+        if "math" in q or "equation" in q or "derive" in q or "formula" in q:
+            return ["math"]
+        elif "background" in q or "prereq" in q or "concept" in q or "history" in q:
+            return ["background"]
+        elif "diagram" in q or "visual" in q or "flowchart" in q:
+            return ["visual"]
+        elif "cite" in q or "reference" in q or "paper" in q:
+            return ["citation"]
+        elif "term" in q or "definition" in q or "meaning" in q:
+            return ["terminology"]
+        else:
+            return ["explanation"]
+
 intent_router = IntentRouter()
