@@ -36,7 +36,7 @@ class AIHarness:
         user_prompt: str,
         session_id: int = 0,
         context_data: Optional[Dict[str, Any]] = None,
-        max_token_budget: int = 4000
+        max_token_budget: int = 12000
     ) -> Dict[str, Any]:
         """
         Executes an LLM call wrapped inside the Harness.
