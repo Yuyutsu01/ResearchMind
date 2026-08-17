@@ -119,7 +119,7 @@ class SwarmOrchestrator:
         selection_text: str, 
         selection_type: str, 
         obj_id: str = None,
-        reading_level: str = "Beginner",
+        page_num: int = 1,
         stream_callback: Callable[[str, Dict[str, Any]], None] = None
     ) -> Dict[str, Any]:
         """
@@ -128,22 +128,23 @@ class SwarmOrchestrator:
         Target performance: TTFT < 700ms, First visible < 800ms, Cache hit < 100ms.
         """
         t_start = time.time()
+        conversation_id = f"conv_{session_id}_{int(t_start * 1000)}"
 
         # 0. Pre-LLM Guardrail Check (Prompt Injection Defense)
         pre_guard = guardrails.validate_pre_llm(selection_text)
         if not pre_guard["is_safe"]:
             return {
                 "error": pre_guard["reason"],
+                "conversation_id": conversation_id,
                 "composer": {
                     "selection_type": selection_type,
-                    "reading_level": reading_level,
                     "composed_markdown": f"# ⚠️ Security Guardrail Notice\n\n{pre_guard['reason']}"
                 }
             }
         selection_text = pre_guard["sanitized_text"]
 
         # 1. PHASE 6 & 7: Check Redis Response Cache (< 10ms lookup, < 100ms cache hit return)
-        cached_res = response_cache.get_cached_response(session_id, selection_text, reading_level)
+        cached_res = response_cache.get_cached_response(session_id, selection_text)
         if cached_res:
             t_total = (time.time() - t_start) * 1000
             cached_res["telemetry"] = {
@@ -152,6 +153,7 @@ class SwarmOrchestrator:
                 "ttft_ms": round(t_total, 1),
                 "total_ms": round(t_total, 1)
             }
+            cached_res["conversation_id"] = conversation_id
             return cached_res
 
         t_cache_check = time.time()
@@ -181,7 +183,6 @@ class SwarmOrchestrator:
             session_id=session_id,
             context=shared_ctx,
             agent_names=required_agents,
-            reading_level=reading_level,
             on_section_callback=stream_callback
         )
         t_exec = time.time()
@@ -190,7 +191,7 @@ class SwarmOrchestrator:
         self._update_run_status(run_id, "COMPLETED")
 
         # 5. PHASE 9: Response Composer Layout Formatting
-        composed_output = response_composer.compose(selection_type, selection_text, agent_results, reading_level)
+        composed_output = response_composer.compose(selection_type, selection_text, agent_results)
         agent_results["composer"] = composed_output
 
         t_total = (time.time() - t_start) * 1000
@@ -204,9 +205,28 @@ class SwarmOrchestrator:
             "total_ms": round(t_total, 1)
         }
         agent_results["telemetry"] = telemetry
+        agent_results["conversation_id"] = conversation_id
+        agent_results["page_num"] = page_num
+
+        # Initialize and save ConversationContext
+        initial_msg = ChatMessage(
+            role="assistant",
+            content=composed_output["composed_markdown"],
+            timestamp=time.time()
+        )
+        conv_ctx = ConversationContext(
+            conversation_id=conversation_id,
+            session_id=session_id,
+            page=page_num,
+            section=selection_type.title(),
+            selected_text=selection_text,
+            content_type=selection_type,
+            messages=[initial_msg.to_dict()]
+        )
+        conversation_manager.save_conversation(conv_ctx)
 
         # Cache payload in Redis for 24 hours
-        response_cache.set_cached_response(session_id, selection_text, reading_level, agent_results)
+        response_cache.set_cached_response(session_id, selection_text, agent_results)
 
         # Log reading timeline event asynchronously
         try:
@@ -217,7 +237,8 @@ class SwarmOrchestrator:
                     json.dumps({
                         "text": selection_text,
                         "type": selection_type,
-                        "summary": agent_results.get("explanation", {}).get("level_1") or f"Analyzed {selection_type}"
+                        "conversation_id": conversation_id,
+                        "summary": f"Analyzed {selection_type}"
                     })
                 )
             )
@@ -225,6 +246,60 @@ class SwarmOrchestrator:
             print(f"[Orchestrator DB Warning] Failed to log selection to timeline: {err}")
 
         return agent_results
+
+    async def process_chat_followup(
+        self,
+        session_id: int,
+        conversation_id: str,
+        question: str,
+        stream_callback: Callable[[str, Dict[str, Any]], None] = None
+    ) -> Dict[str, Any]:
+        """
+        Fast follow-up chat question handler reusing ConversationContext.
+        Target performance: Follow-up cache hit < 100ms, TTFT < 700ms.
+        """
+        t_start = time.time()
+        
+        # 1. Retrieve ConversationContext
+        conv_ctx = conversation_manager.get_conversation(conversation_id)
+        selected_text = conv_ctx.selected_text if conv_ctx else question
+
+        # 2. Append User Message
+        user_msg = ChatMessage(role="user", content=question, timestamp=t_start)
+        conversation_manager.append_message(conversation_id, user_msg)
+
+        # 3. Route follow-up intent to minimal sub-agent set
+        required_agents = intent_router.route_followup_intent(question)
+
+        # 4. Build single-pass SharedContext
+        shared_ctx = context_builder.build_context(
+            session_id=session_id,
+            selection_text=f"ORIGINAL SELECTION: {selected_text}\nUSER QUESTION: {question}",
+            selection_type="followup"
+        )
+
+        # 5. Execute required agents
+        agent_results = await parallel_executor.execute_stream(
+            session_id=session_id,
+            context=shared_ctx,
+            agent_names=required_agents,
+            on_section_callback=stream_callback
+        )
+
+        # 6. Compose chat response
+        chat_markdown = response_composer.compose_chat_response(agent_results, question)
+
+        # 7. Append Assistant Message
+        assistant_msg = ChatMessage(role="assistant", content=chat_markdown, timestamp=time.time())
+        conversation_manager.append_message(conversation_id, assistant_msg)
+
+        t_total = (time.time() - t_start) * 1000
+        return {
+            "conversation_id": conversation_id,
+            "role": "assistant",
+            "content": chat_markdown,
+            "telemetry": {"total_ms": round(t_total, 1)}
+        }
 
     def recover_pending_workflows(self):
         """
