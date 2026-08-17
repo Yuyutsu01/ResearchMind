@@ -121,3 +121,20 @@ body {
   border-radius: 4px;
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
+
+/* GPU-friendly slow floating CSS animation */
+@keyframes floatSlow {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.5deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
