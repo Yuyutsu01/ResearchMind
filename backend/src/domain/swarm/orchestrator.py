@@ -21,6 +21,7 @@ from src.domain.swarm.context_builder import context_builder
 from src.domain.swarm.response_cache import response_cache
 from src.domain.swarm.parallel_executor import parallel_executor
 from src.runtime.guardrails.guardrails import guardrails
+from src.domain.swarm.conversation_context import ChatMessage, ConversationContext, conversation_manager, conversation_context_manager
 
 class SwarmOrchestrator:
     """

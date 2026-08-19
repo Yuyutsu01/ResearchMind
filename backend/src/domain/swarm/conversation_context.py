@@ -88,3 +88,4 @@ class ConversationContextManager:
         return ctx
 
 conversation_manager = ConversationContextManager()
+conversation_context_manager = conversation_manager

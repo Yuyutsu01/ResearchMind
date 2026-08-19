@@ -20,7 +20,7 @@ class ResponseCache:
         raw = f"{session_id}:{selection_text.strip()}:{reading_level.strip().lower()}"
         return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:16]
 
-    def get_cached_response(self, session_id: int, selection_text: str, reading_level: str = "Beginner") -> Optional[Dict[str, Any]]:
+    def get_cached_response(self, session_id: int, selection_text: str, reading_level: str = "") -> Optional[Dict[str, Any]]:
         """
         Retrieves pre-computed response markdown payload from Redis cache.
         """
@@ -37,8 +37,8 @@ class ResponseCache:
         self, 
         session_id: int, 
         selection_text: str, 
-        reading_level: str, 
         response_payload: Dict[str, Any], 
+        reading_level: str = "", 
         ttl: int = 86400
     ):
         """
