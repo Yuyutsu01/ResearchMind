@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ParticleWaveField } from "./ParticleWaveField";
+import { WebGlBackground } from "./WebGlBackground";
 import { ResearchBrand } from "./ResearchBrand";
 import { HeroContent } from "./HeroContent";
 import { ResearchUpload } from "./ResearchUpload";
@@ -15,8 +15,8 @@ interface ResearchWelcomeProps {
 export const ResearchWelcome: React.FC<ResearchWelcomeProps> = ({ onFileSelect, uploading, error }) => {
   return (
     <main className="relative min-h-screen w-screen bg-[#04060f] flex flex-col justify-between p-6 overflow-x-hidden overflow-y-auto select-text font-sans">
-      {/* 1. Two-Symmetrical Smooth Particle Wave Background */}
-      <ParticleWaveField />
+      {/* 1. Three.js WebGL 3D Network & Animated Halftone Background */}
+      <WebGlBackground />
 
       {/* 2. Top Navigation Bar (Branding Left) */}
       <header className="w-full max-w-7xl mx-auto flex items-center justify-between z-20 flex-shrink-0 py-2">
