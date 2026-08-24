@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/researchmind logo.png" alt="ResearchMind Logo" width="450" />
+  <img src="assets/researchmind_logo.png" alt="ResearchMind Logo" width="450" />
 </p>
 
 # ResearchMind
