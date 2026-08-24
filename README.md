@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/researchmind logo.png" alt="ResearchMind Logo" width="450" />
+</p>
+
 # ResearchMind
 
 **An open-source, interactive research paper workspace powered by a multi-agent AI runtime.**
