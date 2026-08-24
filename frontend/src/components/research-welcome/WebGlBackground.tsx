@@ -4,92 +4,9 @@ import React, { useEffect, useRef } from "react";
 import * as THREE from "three";
 
 export const WebGlBackground: React.FC = () => {
-  const linesCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const halftoneCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
-  // 1. WebGL 3D Lines Network Initialization
-  useEffect(() => {
-    const canvas = linesCanvasRef.current;
-    if (!canvas) return;
-
-    const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000);
-
-    const resize = () => {
-      if (!canvas.parentElement) return;
-      const width = canvas.parentElement.clientWidth;
-      const height = canvas.parentElement.clientHeight;
-      renderer.setSize(width, height);
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-    };
-
-    window.addEventListener("resize", resize);
-    resize();
-
-    camera.position.z = 4.5;
-
-    const group = new THREE.Group();
-    scene.add(group);
-
-    // Subtle dark line network
-    const material = new THREE.LineBasicMaterial({ color: 0x38bdf8, transparent: true, opacity: 0.45 });
-    const particlesCount = 180;
-
-    const geometry = new THREE.BufferGeometry();
-    const positions = new Float32Array(particlesCount * 3);
-
-    // Distribute nodes across 3D sphere volume
-    for (let i = 0; i < particlesCount * 3; i += 3) {
-      const r = 2.5;
-      const theta = Math.random() * Math.PI * 2;
-      const phi = Math.acos(Math.random() * 2 - 1);
-
-      positions[i] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i + 1] = r * Math.sin(phi) * Math.sin(theta);
-      positions[i + 2] = r * Math.cos(phi);
-    }
-
-    geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
-
-    // Connect node pairs within distance threshold (distSq < 1.2)
-    const index: number[] = [];
-    for (let i = 0; i < particlesCount; i++) {
-      for (let j = i + 1; j < particlesCount; j++) {
-        const dx = positions[i * 3] - positions[j * 3];
-        const dy = positions[i * 3 + 1] - positions[j * 3 + 1];
-        const dz = positions[i * 3 + 2] - positions[j * 3 + 2];
-        const distSq = dx * dx + dy * dy + dz * dz;
-        if (distSq < 1.2) {
-          index.push(i, j);
-        }
-      }
-    }
-    geometry.setIndex(index);
-
-    const lines = new THREE.LineSegments(geometry, material);
-    group.add(lines);
-
-    let animationFrameId: number;
-    const animate = () => {
-      animationFrameId = requestAnimationFrame(animate);
-      group.rotation.y += 0.0015;
-      group.rotation.x += 0.0008;
-      renderer.render(scene, camera);
-    };
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener("resize", resize);
-      renderer.dispose();
-      geometry.dispose();
-      material.dispose();
-    };
-  }, []);
-
-  // 2. WebGL GLSL Shader Halftone Matrix Initialization
+  // WebGL GLSL Shader Halftone Matrix Background Initialization
   useEffect(() => {
     const canvas = halftoneCanvasRef.current;
     if (!canvas) return;
@@ -175,11 +92,11 @@ export const WebGlBackground: React.FC = () => {
     const points = new THREE.Points(geometry, material);
     scene.add(points);
 
-    const clock = new THREE.Clock();
+    const startTime = performance.now();
     let animationFrameId: number;
     const animate = () => {
       animationFrameId = requestAnimationFrame(animate);
-      material.uniforms.time.value = clock.getElapsedTime();
+      material.uniforms.time.value = (performance.now() - startTime) * 0.001;
       renderer.render(scene, camera);
     };
     animate();
@@ -195,10 +112,8 @@ export const WebGlBackground: React.FC = () => {
 
   return (
     <div className="absolute inset-0 w-full h-full pointer-events-none select-none z-0 overflow-hidden">
-      {/* WebGL Halftone Dot Matrix Layer */}
+      {/* WebGL Halftone Dot Matrix Background Layer */}
       <canvas ref={halftoneCanvasRef} className="absolute inset-0 w-full h-full opacity-60" />
-      {/* WebGL 3D Lines Network Layer */}
-      <canvas ref={linesCanvasRef} className="absolute inset-0 w-full h-full opacity-75" />
     </div>
   );
 };
