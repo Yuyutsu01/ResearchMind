@@ -1,13 +1,16 @@
 .PHONY: dev down logs
 
+# Modern Docker Compose CLI (Docker v2+)
+DOCKER_COMPOSE ?= docker compose
+
 # Run environment
 dev:
-	docker-compose -f deploy/docker-compose.yml up --build
+	$(DOCKER_COMPOSE) -f deploy/docker-compose.yml up --build
 
 # Stop all containers
 down:
-	docker-compose -f deploy/docker-compose.yml down
+	$(DOCKER_COMPOSE) -f deploy/docker-compose.yml down
 
 # View logs
 logs:
-	docker-compose -f deploy/docker-compose.yml logs -f
+	$(DOCKER_COMPOSE) -f deploy/docker-compose.yml logs -f
