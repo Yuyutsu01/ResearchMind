@@ -4,9 +4,8 @@ import json
 import asyncio
 from fastapi import APIRouter, UploadFile, File, HTTPException
 from pydantic import BaseModel
-from typing import Optional, List, Dict
+from typing import Optional
 from src.adapters.db.postgres import execute_query
-from src.adapters.db.qdrant import semantic_memory
 
 from src.domain.services.task_queue import task_queue
 

@@ -43,19 +43,18 @@ class ParallelExecutor:
         print(f"[ParallelExecutor] Executing parallel tasks for agents: {agent_names} (Level: {reading_level})")
 
         agent_results: Dict[str, Any] = {}
-        async_tasks = []
+        names = []
+        futures = []
 
-        # Map agent names to execution coroutines
+        # Map agent names directly to execution coroutines
         for name in agent_names:
-            coro = self._run_single_agent(name, session_id, context, reading_level, on_section_callback)
-            async_tasks.append((name, coro))
+            names.append(name)
+            futures.append(self._run_single_agent(name, session_id, context, reading_level, on_section_callback))
 
         # Run all planned agents concurrently
-        keys = [t[0] for t in async_tasks]
-        futures = [t[1] for t in async_tasks]
         results = await asyncio.gather(*futures, return_exceptions=True)
 
-        for name, res in zip(keys, results):
+        for name, res in zip(names, results):
             if isinstance(res, Exception):
                 print(f"[ParallelExecutor Warning] Agent '{name}' failed: {res}")
                 agent_results[name] = {"error": str(res)}

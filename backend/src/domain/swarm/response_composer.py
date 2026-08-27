@@ -6,8 +6,7 @@ into markdown-ready response layouts for Explain, Math, Background, Visual, and 
 Supports multi-audience Reading-Level adaptation (Beginner, Undergraduate, Researcher).
 """
 
-import json
-from typing import Dict, Any, List
+from typing import Dict, Any
 
 class ResponseComposer:
   """

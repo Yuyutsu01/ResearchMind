@@ -6,7 +6,6 @@ cached SharedContext structures, returning cache hits in < 100ms.
 """
 
 import hashlib
-import json
 from typing import Dict, Any, Optional
 from src.adapters.db.redis_cache import redis_cache
 from src.domain.swarm.context_builder import SharedContext

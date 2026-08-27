@@ -8,7 +8,7 @@ Executes multi-stage safety and validation checks:
 """
 
 import re
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from src.adapters.db.postgres import execute_query
 
 class GuardrailEngine:
